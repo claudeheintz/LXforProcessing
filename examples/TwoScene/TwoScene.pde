@@ -36,7 +36,7 @@
 
 import java.net.*;
 import java.util.*;
-import lxprocessing.*;
+import lx4p.*;
 import processing.serial.*;
 import themidibus.*;
 

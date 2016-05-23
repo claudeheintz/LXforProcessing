@@ -19,7 +19,7 @@
 *
 */
 import java.net.*;
-import lxprocessing.*;
+import lx4p.*;
 
 // if you specify a network interface, myNetworkAddress can be set automatically
 // on Mac ethernet is ofter en0 and WiFi is en1

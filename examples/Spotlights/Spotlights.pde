@@ -18,7 +18,7 @@
  * Addresses 10-12 = R,G,B Bottom light
 */
 import java.net.*;
-import lxprocessing.*;
+import lx4p.*;
 
 // if you specify a network interface, myNetworkAddress can be set automatically (but won't receive broadcast packets)
 // if you want a specific connection, specify the address and set myNetworkInterface to null
