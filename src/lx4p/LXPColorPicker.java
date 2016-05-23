@@ -203,13 +203,25 @@ public class LXPColorPicker
 		p.mouseX < x + w &&
 		p.mouseY >= y    &&
 		p.mouseY < y + h )  {
-		  int tc = cpImage.get( p.mouseX-x, p.mouseY-y );
-		  if ( (tc&0xffffff) != 0 ) {					// make sure its not in a corner
+		  int tc = cpImage.get( p.mouseX-x, p.mouseY-y );//simple: get the color of the pixel at mouse point
+		  if ( (tc&0xffffff) != 0 ) {					 // make sure its not in a corner
 			  current = tc;
 			  colorset = true;
 		  }
 	}
     return colorset;
+  }
+  
+  public byte getRed() {
+	  return (byte) ((current >> 16) & 0xFF);
+  }
+  
+  public byte getGreen() {
+	  return (byte) ((current >> 8) & 0xFF);
+  }
+  
+  public byte getBlue() {
+	  return (byte) (current & 0xFF);
   }
   
 } //class LXPColorPicker
