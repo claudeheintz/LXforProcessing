@@ -28,7 +28,7 @@ public class LXPVScrollbar {
   float xpos, ypos;       			// x and y position of bar
   float spos, newspos;    			// x position of slider
   float sposMin, sposMax; 			// max and min values of slider
-  int loose;              			// how loose/heavy
+  float loose;              			// how loose/heavy
   boolean over;           			// is the mouse over the slider?
   boolean locked;		  			// locked on tracking the mouse
   float ratio;			  			// aspect
@@ -54,7 +54,7 @@ public class LXPVScrollbar {
     xpos = xp-swidth/2;
     ypos = yp;
     sposMin = ypos;							// top
-    sposMax = ypos + sheight - swidth;		// åbottom
+    sposMax = ypos + sheight - swidth;  // åbottom
     spos = sposMax;
     newspos = spos;
     loose = l;
@@ -88,7 +88,7 @@ public class LXPVScrollbar {
     }
     // move the sliding indicator towards the desired location
     boolean updated = false;
-    if (Math.abs(newspos - spos) > 1) {
+    if (Math.abs(newspos - spos) > 0) {
       spos = spos + (newspos-spos)/loose;
       updated = locked;
     }
