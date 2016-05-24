@@ -52,7 +52,7 @@ static final int OUTPUT_OFF = 3;
 
 int protocol = OUTPUT_OFF;
 String myMulticastAddress = "239.255.0.1";
-String myPortName = "/dev/cu.usbserial-EN075987";
+String myPortName = Serial.list()[1];
 
 // pick the OSC output target and port for receiving
 String osc_target_address_string = "127.0.0.1";

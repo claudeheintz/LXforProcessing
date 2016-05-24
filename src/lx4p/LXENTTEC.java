@@ -55,10 +55,12 @@ public class LXENTTEC extends LXDMXInterface  {
 	Serial serialPort = null;
 	
 	public LXENTTEC() {
+		_dmx_slots = DMX_MIN_SLOTS;
 	}
 	
 	public LXENTTEC(Serial sPort) {
 		serialPort = sPort;
+		_dmx_slots = DMX_MIN_SLOTS;
 	}
 
 	/**
@@ -110,7 +112,7 @@ public class LXENTTEC extends LXDMXInterface  {
 	 * @param slots number of slots aka addresses or channels)
 	 */
 	public void setNumberOfSlots(int slots) {
-		_dmx_slots = slots;
+		_dmx_slots = Math.max(slots, DMX_MIN_SLOTS);
 	}
 	
 	/**

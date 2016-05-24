@@ -27,6 +27,7 @@ public abstract class LXDMXInterface extends Object  {
    */
 	
 	public static final int DMX_UNIVERSE_MAX = 512;
+	public static final int DMX_MIN_SLOTS = 24;
 
 	/**
 	 * dmx level data byte

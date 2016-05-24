@@ -91,6 +91,7 @@ public class LXSACN extends LXDMXEthernet  {
 				my_cid[n] = 0;
 			}
 		}
+		_dmx_slots =  DMX_MIN_SLOTS;
 		clearSlots();
 	}
 	
@@ -109,6 +110,7 @@ public class LXSACN extends LXDMXEthernet  {
 				my_cid[n] = 0;
 			}
 		}
+		_dmx_slots =  DMX_MIN_SLOTS;
 		clearSlots();
 		setMulticastAddress(maddr);
 	}
@@ -177,7 +179,7 @@ public class LXSACN extends LXDMXEthernet  {
 	 * @param slots number of slots (aka addresses or channels)
 	 */
 	public void setNumberOfSlots(int slots) {
-		_dmx_slots = slots + 1;			//sACN includes slot for dmx start code
+		_dmx_slots =  Math.max(slots, DMX_MIN_SLOTS) + 1;			//sACN includes slot for dmx start code
 	}
 	
 	/**

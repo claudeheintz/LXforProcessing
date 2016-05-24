@@ -92,6 +92,7 @@ public class LXArtNet extends LXDMXEthernet  {
 	 */
 	public LXArtNet(InetAddress myaddress) {
 	   _my_address = myaddress;
+	   _dmx_slots = DMX_MIN_SLOTS;
 	   clearSlots();
 	}
 	/**
@@ -105,6 +106,7 @@ public class LXArtNet extends LXDMXEthernet  {
 	public LXArtNet(InetAddress myaddress, InetAddress baddr) {
 		_my_address = myaddress;
 		setBroadcastAddress(baddr);
+		_dmx_slots = DMX_MIN_SLOTS;
 	   clearSlots();
 	}
 	
@@ -166,7 +168,7 @@ public class LXArtNet extends LXDMXEthernet  {
 	 * @param slots number of slots (aka addresses or channels)
 	 */
 	public void setNumberOfSlots(int slots) {
-		_dmx_slots = slots;
+		_dmx_slots = Math.max(slots, DMX_MIN_SLOTS);
 	}
 	
 	/**
