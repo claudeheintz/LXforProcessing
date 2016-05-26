@@ -15,7 +15,7 @@
  * banks of faders are controlled by opposing x/y master faders.
  *
  * When a DMX interface is selected, changing the position of a scrollbar sets the level of the corresponding
- * address/channel.
+ * address/channel.  (to patch the sliders to other dmx addresses uncomment and edit outAddresses array)
  *
  * When OSC is active, changing the position of a scrollbar sends an OSC Message
  * with one of the following the address patterns:
@@ -39,45 +39,91 @@ import java.util.*;
 import lx4p.*;
 import processing.serial.*;
 
+//*********************************  Control Variables  *********************************
+
 // if you specify a network interface name, binding address can be set automatically
 // otherwise, set myNetworkInterface = "" and enter the local ip address of the desired interface
-String myNetworkInterface = "en1";
+// networkInterfaceIndex is used to search through available interfaces
+int networkInterfaceIndex = 0;
+String myNetworkInterface = getNextNetworkInterfaceName();
 String myNetworkAddress = "127.0.0.1";
 
-static final int OUTPUT_SACN = 0;
-static final int OUTPUT_ARTNET = 1;
-static final int OUTPUT_ENTTEC = 2;
-static final int OUTPUT_OFF = 3;
+// ***** DMX output modes.
+//       Selected with radio group rgOutput
+static final int OUTPUT_OFF = 0;
+static final int OUTPUT_ENTTEC = 1;
+static final int OUTPUT_ARTNET = 2;
+static final int OUTPUT_SACN = 3;
 
+// ***** DMX output settings
 int protocol = OUTPUT_OFF;
+
+// sACN uses multicast
 String myMulticastAddress = "239.255.0.1";
+// a seral port is used for the ENTTEC DMX USB Pro protocol
+// serialPortIndex is used to search through available interfaces
 int serialPortIndex = 0;
-String myPortName = Serial.list()[serialPortIndex];
-
-// pick the OSC output target and port for receiving
-String osc_target_address_string = "127.0.0.1";
-int osc_target_port = 53010;
-boolean aquire_target = true;
-int osc_receive_port = 53011;
-
-InetAddress osc_target_address = null;
-LXOSC myosc = null;
+String myPortName = getNextSerialPortName();
+// DMX interface object
 LXDMXInterface dmx;
 
+// ***** OSC settings
+//       select mode with radio group rgOSC
+static final int OSC_OFF = 0;
+static final int OSC_ENABLED = 1;
+// OSC output target and port for receiving
+String osc_target_address_string = "127.0.0.1";
+InetAddress osc_target_address = null;
+int osc_target_port = 53010;
+// set the output address when OSC is received
+boolean aquire_target = true;
+// OSC input port
+int osc_receive_port = 53011;
+// OSC interface object
+LXOSC myosc = null;
+
+// ***** Auto-fade
+//       select mode with radio group rgAutoFade
+static final int AUTO_FADE_OFF = 0;
+static final int AUTO_FADE_ENABLED = 1;
+boolean fading = false;
+// fade direction (masters up/down, fade to bank x/y)
+boolean fading_to_x = true;
+// Auto-fade timing
+double time_fade_started;
+double duration = 3;
+
+// ***** arrays
+//       hold the current values of the x/y faders, masters and resulting output
+int[] barlevels;
+int[] barylevels;
+int[] outlevels;
+// array that can be used to patch output to DMX addresses
+int[] outAddresses;
+
+
+
+//*********************************  UI Variables  *********************************
+
+// The app has are two modes, setup and operate.
+//     Text fields and radio buttons are shown in setup mode.
+//     Sliders and masters are shown in operate mode.
+boolean setup_mode = true;
+static int numberOfBars = 12;
+
+// ***** sliders for the x and y bank of faders as well as the master faders
 LXPVScrollbar[] bars;
 LXPVScrollbar[] barsy;
 LXPVScrollbar masterx;
 LXPVScrollbar mastery;
 
-int[] barlevels;
-int[] barylevels;
-int[] outlevels;
-int[] outAddresses;
-static int numberOfBars = 12;
-LXPRadioGroup rg;
-LXPRadioGroup rgo;
-LXPRadioGroup rgaf;
+// ***** radio groups for setup mode
+LXPRadioGroup rgOutput;
+LXPRadioGroup rgOSC;
+LXPRadioGroup rgAutoFade;
 
+// ***** text fields
+// text fields need to be in a group which sends key presses to the active field
 LXPTextGroup fieldGroup;
 LXPTextField network_interface_field;
 LXPTextField local_ip_address_field;
@@ -87,7 +133,8 @@ LXPTextField osc_target_ip_field;
 LXPTextField osc_target_port_field;
 LXPTextField osc_receive_port_field;
 
-boolean setup_mode = true;
+// ***** push buttons
+// buttons subclass LXPButton and override mouseClicked() method
 public class LXPSetupModeButton extends LXPButton {
     public LXPSetupModeButton(int xp, int yp, int w, int h, String t) {
       super(xp,yp,w,h,t);
@@ -104,34 +151,29 @@ public class LXPSetupModeButton extends LXPButton {
  }
 LXPSetupModeButton mode_button;
 
+public class LXPNextNetworkInterfaceButton extends LXPButton {
+    public LXPNextNetworkInterfaceButton(int xp, int yp, int w, int h, String t) {
+      super(xp,yp,w,h,t);
+    }
+    
+    public void mouseClicked() {
+		myNetworkInterface = getNextNetworkInterfaceName();
+		network_interface_field.value = myNetworkInterface;
+    }
+ }
+LXPNextNetworkInterfaceButton nicSelect_button;
+
 public class LXPNextSerialPortButton extends LXPButton {
     public LXPNextSerialPortButton(int xp, int yp, int w, int h, String t) {
       super(xp,yp,w,h,t);
     }
     
     public void mouseClicked() {
-      serialPortIndex += 1;
-    	if ( serialPortIndex >= Serial.list().length ) {
-    		serialPortIndex = 0;
-    	}
-		myPortName = Serial.list()[serialPortIndex];
+		myPortName = getNextSerialPortName();
 		widget_port_name_field.value = myPortName;
     }
  }
 LXPNextSerialPortButton serialSelect_button;
-
-// ########  Auto-Fade section  ######## 
-
-boolean fading = false;
-boolean fading_to_x = true;
-double time_fade_started;
-double duration = 3;
-
-public void startFade() {
-  fading = true;
-  time_fade_started = System.currentTimeMillis();
-  fading_to_x = ( masterx.getValue() < 127 );
-}
 
 public class LXPGoButton extends LXPButton {
     public LXPGoButton(int xp, int yp, int w, int h, String t) {
@@ -144,39 +186,7 @@ public class LXPGoButton extends LXPButton {
  }
 LXPGoButton go_button;
 
-
-void setupNetworkSocket() {
-  if ( dmx != null ) {
-    dmx.close();
-    dmx = null;
-  }
-  if ( protocol == OUTPUT_SACN ) {
-    dmx = LXDMXEthernet.createDMXEthernet(true, network_interface_field.value, local_ip_address_field.value, dmx_target_address_field.value);
-  } else if ( protocol == OUTPUT_ARTNET ) {
-    //null targetAddress means broadcast address automatically assigned
-    String taddr = dmx_target_address_field.value;
-    if ( taddr.length() == 0 ) {
-      taddr = null;
-    }
-    dmx = LXDMXEthernet.createDMXEthernet(false, network_interface_field.value, local_ip_address_field.value, taddr);
-  } else if ( protocol == OUTPUT_ENTTEC ) {
-    dmx = LXENTTEC.createDMXSerial(this, widget_port_name_field.value, 9600);
-  }
-  if ( dmx != null ) {
-    dmx.setNumberOfSlots(bars.length);
-  }
-}
-
-void setupOSC() {
-  if ( myosc == null ) {
-    myosc = LXOSC.createLXOSC(null, "0.0.0.0", safeParseInt(osc_receive_port_field.value));
-    try {
-      osc_target_address = InetAddress.getByName(osc_target_ip_field.value);
-      osc_target_port = safeParseInt(osc_target_port_field.value);
-      synchOSC();
-    } catch (Exception e) {}  //ignore
-  }
-}
+//*********************************  setup UI & control  *********************************
 
 void setup() {
   size(740, 400);
@@ -216,37 +226,39 @@ void setup() {
   outAddresses[10] = 11;
   outAddresses[11] = 12;
   */
-  
-  rg = new LXPRadioGroup(4);
-  LXPRadioButton nrb = rg.addButton(100, 40, 20);
-  nrb.title = "sACN:";
-  nrb = rg.addButton(100, 80, 20);
-  nrb.title = "Art-Net:";
-  nrb = rg.addButton(100, 120, 20);
-  nrb.title = "ENTTEC:";
-  nrb = rg.addButton(100, 160, 20);
+
+
+  rgOutput = new LXPRadioGroup(4);
+  LXPRadioButton nrb = rgOutput.addButton(100, 160, 20);
   nrb.title = "Off:";
+  nrb = rgOutput.addButton(100, 120, 20);
+  nrb.title = "ENTTEC:";
+  nrb = rgOutput.addButton(100, 80, 20);
+  nrb.title = "Art-Net:";
+  nrb = rgOutput.addButton(100, 40, 20);
+  nrb.title = "sACN:";
+  
   if ( dmx != null ) {
-    rg.setSelectedIndex(protocol);
+    rgOutput.setSelectedIndex(protocol);
   } else {
-    rg.setSelectedIndex(3);
+    rgOutput.setSelectedIndex(OUTPUT_OFF);
   }
   
-  rgo = new LXPRadioGroup(2);
-  nrb = rgo.addButton(100, 225, 20);
-  nrb.title = "OSC";
-  nrb = rgo.addButton(100, 265, 20);
+  rgOSC = new LXPRadioGroup(2);
+  nrb = rgOSC.addButton(100, 265, 20);
   nrb.title = "Off";
+  nrb = rgOSC.addButton(100, 225, 20);
+  nrb.title = "OSC";
   nrb.state = true;
-  rgo.setSelectedIndex(1);      //OSC starts off
+  rgOSC.setSelectedIndex(OSC_OFF);      //OSC starts off
   
-  rgaf = new LXPRadioGroup(2);
-  nrb = rgaf.addButton(600, 50, 20);
+  rgAutoFade = new LXPRadioGroup(2);
+  nrb = rgAutoFade.addButton(600, 50, 20);
   nrb.title = "Manual";
   nrb.state = true;
-  nrb = rgaf.addButton(600, 90, 20);
+  nrb = rgAutoFade.addButton(600, 90, 20);
   nrb.title = "Auto";
-  rgaf.setSelectedIndex(0);      //defaults manual
+  rgAutoFade.setSelectedIndex(AUTO_FADE_OFF);      //defaults manual
   
   /* A text field group is necessary to direct key presses to the
   *  text field that has keyboard "focus".  In the keyPressed() method below,
@@ -263,6 +275,8 @@ void setup() {
   } else {
     dmx_target_address_field.value = "";
   }
+  nicSelect_button = new LXPNextNetworkInterfaceButton(350, 28, 20, 16, ">");
+  
   widget_port_name_field = fieldGroup.addField(200,113,32, "Serial Port:");
   widget_port_name_field.value = myPortName;
   serialSelect_button = new LXPNextSerialPortButton(490, 113, 20, 16, ">");
@@ -287,6 +301,8 @@ void setup() {
   go_button = new LXPGoButton(590, 310, 65, 20, "Go");
 }
 
+//*********************************  drawing & events  *********************************
+
 void draw() {
   checkOSC();
   background(255);
@@ -294,9 +310,10 @@ void draw() {
   mode_button.draw(this);
   if ( setup_mode ) {
     fieldGroup.draw(this);
-    rg.draw(this);
-    rgo.draw(this);
-    rgaf.draw(this);
+    rgOutput.draw(this);
+    rgOSC.draw(this);
+    rgAutoFade.draw(this);
+    nicSelect_button.draw(this);
     serialSelect_button.draw(this);
   } else {
     noStroke();
@@ -308,7 +325,7 @@ void draw() {
     int oldmasterx = masterx.getValue();
     int oldmastery = mastery.getValue();
     
-    if ( rgaf.selected == 1 ) {
+    if ( rgAutoFade.selected == AUTO_FADE_ENABLED ) {
       go_button.draw(this);
       //update to get current values
       if ( fading ) {
@@ -385,24 +402,26 @@ void draw() {
 
 void mousePressed() {
   if ( setup_mode ) {
-    if ( rg.mousePressed() ) {
-      protocol = rg.selected;
-      if ( protocol == 0 ) {
+    if ( rgOutput.mousePressed() ) {
+      protocol = rgOutput.selected;
+      if ( protocol == OUTPUT_SACN ) {
         dmx_target_address_field.value = myMulticastAddress;
-      } else if ( protocol == 3 ) {
+      } else if ( protocol == OUTPUT_OFF ) {
         dmx_target_address_field.value = "";
       }
       setupNetworkSocket();
-    } else if ( rgo.mousePressed() ) {
-      if ( myosc != null ) {
-        myosc.close();
+    } else if ( rgOSC.mousePressed() ) {
+      if ( rgOSC.selected == OSC_OFF ) {
+        if ( myosc != null ) {
+          myosc.close();
+        }
         myosc = null;
         osc_target_address = null;
       } else {
         setupOSC();
       }
-    } else if ( rgaf.mousePressed() ) {
-      // autofade setting used elsewhere
+    } else if ( rgAutoFade.mousePressed() ) {
+      
     } else {
       fieldGroup.mousePressed();
     }
@@ -413,8 +432,9 @@ void mouseReleased() {
   mode_button.mouseReleased();
   if ( setup_mode ) {
   	serialSelect_button.mouseReleased();
+  	nicSelect_button.mouseReleased();
   } else {
-	  if ( rgaf.selected == 1 ) {
+	  if ( rgAutoFade.selected == AUTO_FADE_ENABLED ) {
 		 go_button.mouseReleased();
 	  }
   }
@@ -437,6 +457,77 @@ void dispose(){
   System.out.println("bye bye!");
 }
 
+//*********************************  Network Methods  *********************************
+
+void setupNetworkSocket() {
+  if ( dmx != null ) {
+    dmx.close();
+    dmx = null;
+  }
+  if ( protocol == OUTPUT_SACN ) {
+    dmx = LXDMXEthernet.createDMXEthernet(true, network_interface_field.value, local_ip_address_field.value, dmx_target_address_field.value);
+  } else if ( protocol == OUTPUT_ARTNET ) {
+    //null targetAddress means broadcast address automatically assigned
+    String taddr = dmx_target_address_field.value;
+    if ( taddr.length() == 0 ) {
+      taddr = null;
+    }
+    dmx = LXDMXEthernet.createDMXEthernet(false, network_interface_field.value, local_ip_address_field.value, taddr);
+  } else if ( protocol == OUTPUT_ENTTEC ) {
+    dmx = LXENTTEC.createDMXSerial(this, widget_port_name_field.value, 9600);
+  }
+  if ( dmx != null ) {
+    dmx.setNumberOfSlots(bars.length);
+  }
+}
+
+void setupOSC() {
+  if ( myosc == null ) {
+    myosc = LXOSC.createLXOSC(null, "0.0.0.0", safeParseInt(osc_receive_port_field.value));
+    try {
+      osc_target_address = InetAddress.getByName(osc_target_ip_field.value);
+      osc_target_port = safeParseInt(osc_target_port_field.value);
+      synchOSC();
+    } catch (Exception e) {}  //ignore
+  }
+}
+
+String getNextNetworkInterfaceName() {
+	networkInterfaceIndex += 1;
+	int ni = 0;
+	try {
+		Enumeration<NetworkInterface> nets = NetworkInterface.getNetworkInterfaces();
+		while ( nets.hasMoreElements() ) {
+		  NetworkInterface nic = nets.nextElement();
+		  if ( ni == networkInterfaceIndex ) {
+				return nic.getName();
+		  }
+		  ni ++;
+		}
+		// did not find, reset and return first (if possible)
+		networkInterfaceIndex = 0;
+		nets = NetworkInterface.getNetworkInterfaces();
+		if ( nets.hasMoreElements() ) {
+			return nets.nextElement().getName();
+		}
+	} catch (Exception e) {}
+	return "";
+}
+
+String getNextSerialPortName() {
+	serialPortIndex += 1;
+	String[] ports = Serial.list();
+	if ( ports.length > 0 ) {
+		if ( serialPortIndex >= ports.length ) {
+			serialPortIndex = 0;
+		}
+		return ports[serialPortIndex];
+	}
+	return "";
+}
+
+//*********************************  OSC  *********************************
+
 /**
  * read up to 10 mesages from the socket
 */
@@ -447,7 +538,7 @@ void checkOSC() {
     while ( ok2read ) {
       Vector<LXOSCMessage> msgs = myosc.readPacket();  //may return a bundle
       if ( msgs.size() > 0 ) {
-        if ( aquire_target ) {
+		  if ( aquire_target ) {
           osc_target_ip_field.value = myosc.receivedFrom.getHostAddress();
         }
 
@@ -467,7 +558,7 @@ void checkOSC() {
             }
           } else if ( msg.addressElementAt(0).equals("3") ) {
             if ( msg.addressElementAt(1).equals("push1") ) {
-              if (( rgaf.selected == 1 ) && ( msg.floatAt(0) > 0 )) {
+              if (( rgAutoFade.selected == AUTO_FADE_ENABLED ) && ( msg.floatAt(0) > 0 )) {
                 startFade();
               }
             } else {
@@ -497,50 +588,12 @@ void synchOSC() {
   mastery.sendValueWithOSC(myosc, osc_target_address, osc_target_port);
 }
 
-void controllerChange(int channel, int number, int value) {
-  // Receive a controllerChange
-  println("Number:"+number);
-  if ( number == 2 ) {
-    masterx.setValue(value, 127, true);
-  } else if ( number == 3 ) {
-    mastery.setValue(value, 127, true);
-  } else if ( number == 42 ) {
-    bars[0].setValue(value, 127, true);
-  } else if ( number == 43 ) {
-    bars[1].setValue(value, 127, true);
-  } else if ( number == 50 ) {
-    bars[2].setValue(value, 127, true);
-  } else if ( number == 51 ) {
-    bars[3].setValue(value, 127, true);
-  } else if ( number == 52 ) {
-    bars[4].setValue(value, 127, true);
-  } else if ( number == 53 ) {
-    bars[5].setValue(value, 127, true);
-  } else if ( number == 54 ) {
-    bars[6].setValue(value, 127, true);
-  } else if ( number == 55 ) {
-    bars[7].setValue(value, 127, true);
-  } else if ( number == 56 ) {
-    bars[8].setValue(value, 127, true);
-  } else if ( number == 85 ) {
-    barsy[0].setValue(value, 127, true);
-  } else if ( number == 86 ) {
-    barsy[1].setValue(value, 127, true);
-  } else if ( number == 87 ) {
-    barsy[2].setValue(value, 127, true);
-  } else if ( number == 88 ) {
-    barsy[3].setValue(value, 127, true);
-  } else if ( number == 89 ) {
-    barsy[4].setValue(value, 127, true);
-  } else if ( number == 90 ) {
-    barsy[5].setValue(value, 127, true);
-  } else if ( number == 91 ) {
-    barsy[6].setValue(value, 127, true);
-  } else if ( number == 92 ) {
-    barsy[7].setValue(value, 127, true);
-  } else if ( number == 93 ) {
-    barsy[8].setValue(value, 127, true);
-  }
+//*********************************  Auto-Fade Methods  *********************************
+
+public void startFade() {
+  fading = true;
+  time_fade_started = System.currentTimeMillis();
+  fading_to_x = ( masterx.getValue() < 127 );
 }
 
 public boolean updateFade() {
