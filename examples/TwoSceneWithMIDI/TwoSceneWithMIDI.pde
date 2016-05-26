@@ -38,6 +38,7 @@ import java.net.*;
 import java.util.*;
 import lx4p.*;
 import processing.serial.*;
+import themidibus.*;
 
 // if you specify a network interface name, binding address can be set automatically
 // otherwise, set myNetworkInterface = "" and enter the local ip address of the desired interface
@@ -60,6 +61,8 @@ int osc_target_port = 53010;
 boolean aquire_target = true;
 int osc_receive_port = 53011;
 
+MidiBus myBus = null; // MidiBus object from themidibus library
+
 InetAddress osc_target_address = null;
 LXOSC myosc = null;
 LXDMXInterface dmx;
@@ -77,6 +80,7 @@ static int numberOfBars = 12;
 LXPRadioGroup rg;
 LXPRadioGroup rgo;
 LXPRadioGroup rgaf;
+LXPRadioGroup rgm;
 
 LXPTextGroup fieldGroup;
 LXPTextField network_interface_field;
@@ -86,6 +90,7 @@ LXPTextField widget_port_name_field;
 LXPTextField osc_target_ip_field;
 LXPTextField osc_target_port_field;
 LXPTextField osc_receive_port_field;
+LXPTextField midi_device_name_field;
 
 boolean setup_mode = true;
 public class LXPSetupModeButton extends LXPButton {
@@ -240,6 +245,14 @@ void setup() {
   nrb.state = true;
   rgo.setSelectedIndex(1);      //OSC starts off
   
+  rgm = new LXPRadioGroup(2);
+  nrb = rgm.addButton(100, 325, 20);
+  nrb.title = "MIDI";
+  nrb = rgm.addButton(100, 365, 20);
+  nrb.title = "OFF";
+  nrb.state = true;
+  rgm.setSelectedIndex(1);      //MIDI starts off
+  
   rgaf = new LXPRadioGroup(2);
   nrb = rgaf.addButton(600, 50, 20);
   nrb.title = "Manual";
@@ -274,6 +287,9 @@ void setup() {
   osc_receive_port_field = fieldGroup.addField(255,260,6, "OSC Receive Port:");
   osc_receive_port_field.value = "53011";
   
+  midi_device_name_field = fieldGroup.addField(255,330,6, "Device Name:");
+  midi_device_name_field.value = "SLIDER/KNOB";
+  
   // Network interfaces are named differently on Windows
   // adjust for ethernet
   if ( network_interface_field.value.equals("en0") ) {
@@ -297,6 +313,7 @@ void draw() {
     rg.draw(this);
     rgo.draw(this);
     rgaf.draw(this);
+    rgm.draw(this);
     serialSelect_button.draw(this);
   } else {
     noStroke();
@@ -401,8 +418,14 @@ void mousePressed() {
       } else {
         setupOSC();
       }
+    } else if ( rgm.mousePressed() ) {
+      if ( rgm.selected == 0 ) {
+        initMIDI();
+      } else {
+        myBus = null;
+      }
     } else if ( rgaf.mousePressed() ) {
-      // autofade setting used elsewhere
+      
     } else {
       fieldGroup.mousePressed();
     }
@@ -495,6 +518,21 @@ void synchOSC() {
   }
   masterx.sendValueWithOSC(myosc, osc_target_address, osc_target_port);
   mastery.sendValueWithOSC(myosc, osc_target_address, osc_target_port);
+}
+
+void initMIDI() {
+  MidiBus.findMidiDevices();
+  String[] available = MidiBus.availableInputs();
+  for (int j=0; j<available.length; j++) {
+    String midiDeviceName = midi_device_name_field.value;
+    if ( available[j].equals(midiDeviceName) ) {
+      myBus = new MidiBus(this, midiDeviceName, -1);
+      break;
+    }
+  }
+  if ( myBus == null ) {
+    rgm.setSelectedIndex(1);
+  }
 }
 
 void controllerChange(int channel, int number, int value) {

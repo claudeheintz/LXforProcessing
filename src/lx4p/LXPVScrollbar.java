@@ -239,14 +239,17 @@ public class LXPVScrollbar {
    * checks to see if msg address pattern matches the scrollbar's
    * and if so, sets scrollbar's value based on msg's float argument (0-1.0)
    * @param msg the incoming OSC message object
+   * @return true if value was set (allows synchronization to prevent feedback loop)
    */
   
-  public void setValueWithOSCMessage(LXOSCMessage msg) {
+  public boolean setValueWithOSCMessage(LXOSCMessage msg) {
 	  if ( oscAddress != null ) {
 		  if ( msg.matchesAddressPattern(oscAddress) ) {
-			  setValue(msg.floatAt(0));
+			  setValue(msg.floatAt(0), 1.0f, false);		// do not animate to prevent feedback!
+			  return true;
 		  }
 	  }
+	  return false;
   }
   
 } //class LXPVScrollbar
