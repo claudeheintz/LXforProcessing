@@ -544,20 +544,21 @@ void checkOSC() {
 
         for ( int k=0; k<msgs.size(); k++ ) {
           LXOSCMessage msg = msgs.elementAt(k);
-          if ( msg.addressElementAt(0).equals("1") ) {
+          if ( msg.partOfPatternMatchesAddressString(0,"1") ) {
             for (int i=0; i<bars.length; i++) {
               if ( bars[i].setValueWithOSCMessage(msg) ) {
+                System.out.println("marched");
                 barlevels[i] = bars[i].getValue();
               }
             }
-          } else if ( msg.addressElementAt(0).equals("2") ) {
+          } else if ( msg.partOfPatternMatchesAddressString(0,"2") ) {
             for (int i=0; i<barsy.length; i++) {
               if ( barsy[i].setValueWithOSCMessage(msg) ) {
                 barylevels[i] = barsy[i].getValue();
               }
             }
-          } else if ( msg.addressElementAt(0).equals("3") ) {
-            if ( msg.addressElementAt(1).equals("push1") ) {
+          } else if ( msg.partOfPatternMatchesAddressString(0,"3") ) {
+            if (  msg.partOfPatternMatchesAddressString(1, "push1") ) {
               if (( rgAutoFade.selected == AUTO_FADE_ENABLED ) && ( msg.floatAt(0) > 0 )) {
                 startFade();
               }

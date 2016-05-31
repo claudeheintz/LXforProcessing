@@ -336,32 +336,32 @@ void checkOSC() {
 
       LXOSCMessage msg = msgs.elementAt(0);
       System.out.println("OSC");
-      if ( msg.addressElementAt(0).equals("1") ) {      //first address pattern element
-        if ( msg.addressElementAt(1).equals("xy1") ) {
+      if ( msg.partOfPatternMatchesAddressString(0, "1") ) {      //first address pattern element
+        if ( msg.partOfPatternMatchesAddressString(1, "xy1") ) {
           System.out.println();
           System.out.println(msg.argumentAt(0).getFloat() + ", " + msg.argumentAt(1).getFloat());
           
           hhue[hlight] = (int) (msg.argumentAt(1).getFloat() * 65535);  // y position sets hue
           hsat[hlight] = (int) (msg.argumentAt(0).getFloat() * 255);    // x position sets saturation
           lightStateNeedsUpdate = true;
-        } else if ( msg.addressElementAt(1).equals("push1") ) {
+        } else if ( msg.partOfPatternMatchesAddressString(1, "push1") ) {
           rg.setSelectedIndex(0);
           hlight = 0;
-        } else if ( msg.addressElementAt(1).equals("push2") ) {
+        } else if ( msg.partOfPatternMatchesAddressString(1, "push2") ) {
           rg.setSelectedIndex(1);
           hlight = 1;
-        } else if ( msg.addressElementAt(1).equals("push3") ) {
+        } else if ( msg.partOfPatternMatchesAddressString(1, "push3") ) {
           rg.setSelectedIndex(2);
           hlight = 2;
-        } else if ( msg.addressElementAt(1).equals("push4") ) {
+        } else if ( msg.partOfPatternMatchesAddressString(1, "push4") ) {
           rg2.setSelectedIndex(0);
           onswitch[hlight] = true;
           lightStateNeedsUpdate = true;
-        } else if ( msg.addressElementAt(1).equals("push5") ) {
+        } else if ( msg.partOfPatternMatchesAddressString(1, "push5") ) {
           rg2.setSelectedIndex(1);
           onswitch[hlight] = false;
           lightStateNeedsUpdate = true;
-        } else if ( msg.addressElementAt(1).equals("fader1") ) {
+        } else if ( msg.partOfPatternMatchesAddressString(1, "fader1") ) {
           hbri[hlight] = (int) (msg.argumentAt(0).getFloat() * 255);
           levelFader.setValue(hbri[hlight], false);
           lightStateNeedsUpdate = true;

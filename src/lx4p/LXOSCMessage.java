@@ -34,7 +34,7 @@ public class LXOSCMessage  {
 	}
 	
 	/**
-	 * construct OSC message with list of address pattern elements
+	 * construct OSC message with list of address pattern parts
 	 */
 	public LXOSCMessage(Vector<String> addressPattern) {
 		_address_pattern = addressPattern;
@@ -42,7 +42,7 @@ public class LXOSCMessage  {
 	}
 	
 	/**
-	 * construct OSC message with list of address pattern elements
+	 * construct OSC message with list of address pattern parts
 	 */
 	public LXOSCMessage(String pstr) {
 		setAddressPattern(pstr);
@@ -59,7 +59,7 @@ public class LXOSCMessage  {
 	
 	/**
 	 * Set the address pattern list
-	 * @param addressPattern list of address pattern elements
+	 * @param addressPattern list of address pattern parts
 	 */
 	public void setAddressPattern(Vector<String> addressPattern) {
 		_address_pattern = addressPattern;
@@ -67,10 +67,10 @@ public class LXOSCMessage  {
 	
 	/**
 	 * Set the address pattern from a String
-	 * @param pstr address pattern string with elements separated by forward slashes
+	 * @param pstr address pattern string with parts separated by forward slashes
 	 */
 	public void setAddressPattern(String pstr) {
-		setAddressPattern(addressPatternStringToElements(pstr));
+		setAddressPattern(addressPatternStringToParts(pstr));
 	}
 	
 	/**
@@ -78,7 +78,7 @@ public class LXOSCMessage  {
 	 * @param pstr
 	 * @return Vector of strings derived from separating the input string into elements separated by forward slashes
 	 */
-	public static Vector<String> addressPatternStringToElements(String pstr) {
+	public static Vector<String> addressPatternStringToParts(String pstr) {
 		Vector<String> rv = new Vector<String>();
 		String[] ta = pstr.split("/");
 		String estr;
@@ -95,7 +95,7 @@ public class LXOSCMessage  {
 	 * adds a string to the address pattern
 	 * @param astr
 	 */
-	public void addAddressElement(String astr) {
+	public void addAddressPart(String astr) {
 		_address_pattern.addElement(astr);
 	}
 	
@@ -104,7 +104,7 @@ public class LXOSCMessage  {
 	 * @param n index of element eg /0.../1.../2.../3...
 	 * @return String element of address pattern
 	 */
-	public String addressElementAt(int n) {
+	public String addressPartAt(int n) {
 		if ( n < _address_pattern.size() ) {
 			return _address_pattern.elementAt(n);
 		}
@@ -113,15 +113,15 @@ public class LXOSCMessage  {
 	
 	/**
 	 * compare address pattern vector to message address pattern
-	 * @param testPattern
-	 * @return true if all address elements match
+	 * @param testPattern vector of pattern matching elements
+	 * @return true if all address elements match pattern elements
 	 */
 	public boolean matchesAddressPattern(Vector<String> testPattern) {
-		if ( _address_pattern.size() != testPattern.size() ) {
-			return false;
+		if ( _address_pattern.size() < testPattern.size() ) {
+			return false;									// testPattern larger can't possibly match
 		}
-		for ( int i=0; i<_address_pattern.size(); i++ ) {
-			if ( ! _address_pattern.elementAt(i).equals(testPattern.elementAt(i)) ) {
+		for ( int i=0; i<testPattern.size(); i++ ) {
+			if ( ! addressPartMatchesPatternPart(_address_pattern.elementAt(i), testPattern.elementAt(i)) ) {
 				return false;
 			}
 		}
@@ -130,12 +130,182 @@ public class LXOSCMessage  {
 	}
 	
 	/**
-	 * compare address pattern string to message address pattern 
+	 * compare osc address vector to message address pattern
+	 * @param testAddress vector of osc address
+	 * @return true if all address pattern parts match pattern elements
+	 */
+	public boolean matchesOSCAddress(Vector<String> testAddress) {
+		if ( _address_pattern.size() != testAddress.size() ) {
+			return false;									  // sizes must match
+		}
+		for ( int i=0; i<testAddress.size(); i++ ) {
+			if ( ! addressPartMatchesPatternPart(testAddress.elementAt(i), _address_pattern.elementAt(i)) ) {
+				return false;
+			}
+		}
+		
+		return true;
+	}
+	
+	/**
+	 * checks to see if test pattern part matches part of address pattern
+	 * @param apart	element of address pattern
+	 * @param ppart element of test pattern
+	 * @return true if the part of an address 
+	 */
+	public static boolean addressPartMatchesPatternPart(String apart, String ppart) {
+		if ( apart.equals(ppart) ) {
+			return true;
+		}
+		int ai = 0;
+		int pj = 0;
+		while ( (ai<apart.length()) && (pj<ppart.length())) {
+			if ( ppart.charAt(pj) ==  '*' ) {
+				pj++;
+				if ( pj == ppart.length() ) {
+					return true;				// wildcard matches to end
+				}
+				char nextpchar = ppart.charAt(pj);	
+				while ( apart.charAt(ai) != nextpchar ) {	//match until next pattern char encountered
+					ai++;
+					if ( ai >= apart.length() ) {
+						return false;	//ran out of characters
+					}
+				}
+				ai++;
+				pj++;
+			} else {		// pattern char not *
+				if ( ppart.charAt(pj) == apart.charAt(ai) ) {
+					ai++;
+					pj++;
+				} else if ( ppart.charAt(pj) == '?' ) { // single char wildcard always matches
+					ai++;
+					pj++;
+				} else if ( ppart.charAt(pj) == '[' ) {
+					pj++;
+					int closeBracketIndex = ppart.indexOf(']', pj);
+					if ( closeBracketIndex < 0 ) {
+						return false;	//invalid list;
+					}
+					if ( ! addressCharMatchesBracketPattern(apart.charAt(ai) , ppart.substring(pj, closeBracketIndex)) ) {
+						return false;
+					}
+					ai++;
+					pj = closeBracketIndex+1;
+				} else if ( ppart.charAt(pj) == '{' ) {
+					return addressPartMatchesBracePatternPart(apart.substring(ai) , ppart.substring(pj+1));
+				} else {			// single character not matched
+					return false;
+				}
+			}
+		}
+		
+		if ( ai==apart.length() ) {
+			return true;
+		}
+		
+		return false;
+	}
+	
+	/**
+	 * matches a set of characters from an address pattern to a character from an address
+	 * @param achar character to match
+	 * @param blist set of characters to match
+	 * @return true if set matches character (or does not match if negated with leading !)
+	 */
+	public static boolean addressCharMatchesBracketPattern(char achar, String blist) {
+		String mblist = blist;
+		boolean negate = false;
+		if ( blist.startsWith("!")) {
+			negate = true;
+			mblist = blist.substring(1);
+		}
+		int cindex = mblist.indexOf(achar);
+		if ( cindex >= 0 ) {				//can be true if start or end of range
+			if ( negate ) {
+				return false;
+			}
+			return true;
+		}
+		
+		// handle ranges (eg. a-f) here
+		
+		int dashIndex = 1;
+		int nDashIndex = 0;
+		while (( dashIndex > 0 ) && (dashIndex+1 < mblist.length())) {
+			nDashIndex = mblist.indexOf("-", dashIndex);
+			if ( mblist.charAt(dashIndex-1) > 0 ) {
+				if ( mblist.length() == dashIndex + 1 ) {
+					return false;	//no character after dash, bad pattern is false despite negate
+				}
+				if (( mblist.charAt(nDashIndex-1) < achar ) && ( achar <  mblist.charAt(nDashIndex+1) )) {
+					if ( negate ) {
+						return false;
+					}
+					return true;
+				}
+				dashIndex = nDashIndex+1;	//check for more dashes
+			} else {
+				dashIndex = 0;
+			}
+		}
+		
+		if ( negate ) {
+			return true;
+		}
+		return false;
+	}
+	
+	/**
+	 * matches substring of address pattern after brace { to an address string
+	 * @param apart	substring of part of an OSC address
+	 * @param ppart substring of part of an OSC address pattern following a left brace {
+	 * @return true if one of the comma separated strings inside the braces and remainder of both strings are matched
+	 */
+	public static boolean addressPartMatchesBracePatternPart(String apart, String ppart) {
+		int closeBraceIndex = ppart.indexOf('}');
+		if ( closeBraceIndex < 0 ) {
+			return false;	//invalid list;
+		}
+		// compare apart to see if it starts with any of the strings inside the braces
+		String[] sa = ppart.substring(0,closeBraceIndex).split(",");
+		for(int i=0; i<sa.length; i++) {
+			if (apart.startsWith(sa[i])) {
+				if ( apart.length() == sa[i].length() ) {	//complete match
+					return true;
+				} else if (ppart.length() > closeBraceIndex + 1  ) {	//both parts have more characters, compare the rest as if they are whole parts
+					return addressPartMatchesPatternPart( apart.substring(sa[i].length()), ppart.substring(closeBraceIndex+1) );
+				}
+			}
+		}
+		return false;	//didn't match
+	}
+	/**
+	 * compare address pattern string to message OSC address
 	 * @param testString
-	 * @return true if all address elements match
+	 * @return true if all address parts match
 	 */
 	public boolean matchesAddressPattern(String testString) {
-		return  matchesAddressPattern( addressPatternStringToElements(testString) );
+		return  matchesAddressPattern( addressPatternStringToParts(testString) );
+	}
+	
+	/**
+	 * compare specific part of address pattern against part of an address string
+	 * @param p index of part to match
+	 * @param s string to match
+	 * @return true if part of message's address pattern matches string
+	 */
+	public boolean partOfPatternMatchesAddressString(int p, String s) {
+		return addressPartMatchesPatternPart(s, _address_pattern.elementAt(p));
+	}
+	
+	/**
+	 * compare OSC address string to message address pattern 
+	 * @param testString
+	 * @return true if all address parts match
+	 */
+	public boolean matchesOSCAddress(String testString) {
+		return  matchesOSCAddress( addressPatternStringToParts(testString) );
 	}
 	
 	/**
