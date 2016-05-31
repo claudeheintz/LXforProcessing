@@ -229,12 +229,12 @@ public class LXOSCMessage  {
 		}
 		
 		// handle ranges (eg. a-f) here
-		
 		int dashIndex = 1;
 		int nDashIndex = 0;
-		while (( dashIndex > 0 ) && (dashIndex+1 < mblist.length())) {
+		boolean done = mblist.length() < 3;
+		while ( ! done ) {
 			nDashIndex = mblist.indexOf("-", dashIndex);
-			if ( mblist.charAt(dashIndex-1) > 0 ) {
+			if ( nDashIndex > 0 ) {
 				if ( mblist.length() == dashIndex + 1 ) {
 					return false;	//no character after dash, bad pattern is false despite negate
 				}
@@ -245,8 +245,11 @@ public class LXOSCMessage  {
 					return true;
 				}
 				dashIndex = nDashIndex+1;	//check for more dashes
+				if ( dashIndex+1 >= mblist.length() ) {
+					done = true;
+				}
 			} else {
-				dashIndex = 0;
+				done = true;	//no dash, end loop
 			}
 		}
 		
