@@ -612,6 +612,9 @@ public class LXOSCMessage  {
 			ci++;
 		}
 		
+		buffer[ci] = 0;		//zero terminate string
+		ci++;
+		
 		int pad = (ci % 4);
 		if ( pad != 0 ) {
 			pad = 4 - pad;
