@@ -227,7 +227,6 @@ void setup() {
   outAddresses[11] = 12;
   */
 
-
   rgOutput = new LXPRadioGroup(4);
   LXPRadioButton nrb = rgOutput.addButton(100, 160, 20);
   nrb.title = "Off:";
@@ -390,6 +389,7 @@ void draw() {
         outlevels[i] = outlevel;
         if ( dmx != null ) {
           dmx.setSlot(outAddresses[i], outlevel);
+          System.out.println("set " + outAddresses[i] + " to " + outlevel);
         }
       }
     }      // for loop i in bars.length
@@ -477,7 +477,13 @@ void setupNetworkSocket() {
     dmx = LXENTTEC.createDMXSerial(this, widget_port_name_field.value, 9600);
   }
   if ( dmx != null ) {
-    dmx.setNumberOfSlots(bars.length);
+    int m = bars.length;        // find highest output address
+    for(int j=0; j<outAddresses.length; j++) {
+      if ( outAddresses[j] > m ) {
+        m = outAddresses[j];
+      }
+    }
+    dmx.setNumberOfSlots(m);
   }
 }
 
@@ -547,7 +553,7 @@ void checkOSC() {
           if ( msg.partOfPatternMatchesAddressString(0,"1") ) {
             for (int i=0; i<bars.length; i++) {
               if ( bars[i].setValueWithOSCMessage(msg) ) {
-                System.out.println("marched");
+                System.out.println("osc= " + bars[i].getValue());
                 barlevels[i] = bars[i].getValue();
               }
             }
