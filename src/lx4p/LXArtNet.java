@@ -85,6 +85,10 @@ public class LXArtNet extends LXDMXEthernet  {
 	 * IPv4 address of second received dmx source
 	 */
 	InetAddress _dmx_source2 = null;
+	/**
+	 * IPv4 address of node found through poll reply
+	 */
+	public InetAddress output_node = null;
 
 	/**
 	 * constructor initializes data buffers and local IP address
@@ -254,18 +258,21 @@ public class LXArtNet extends LXDMXEthernet  {
 	 */
 	public boolean readPacket(DatagramSocket socket) {
 		boolean good_dmx = false;
-		// setup a DatagramPacket.  Note that _packet_buffer is the storage for the receivePacket
+		// setup a DatagramPacket.  Note that _packet_buffer is the storage for the receivePacket, zero the buffer
+		for ( int i = 0; i < _packet_buffer.length; i++ ) {
+			_packet_buffer[i] = 0;
+  		}
 		DatagramPacket receivePacket = new DatagramPacket(_packet_buffer, _packet_buffer.length);
 		try {
 			socket.receive(receivePacket);
 			good_dmx = (processDatagramPacket(socket, receivePacket) == ARTNET_ART_DMX);
 		} catch ( Exception e) {
 			//   will catch receive time out exception
-			//System.out.println("receive exception " + e);
+			//System.out.println("readPacket exception " + e);
 		}
       return good_dmx;
 	}
-
+	
 	/**
 	 * parses DatagramPacket for Art-Net content
 	 * @param socket Possibly used to send reply.
@@ -331,10 +338,18 @@ public class LXArtNet extends LXDMXEthernet  {
 				break;
 			case ARTNET_ART_ADDRESS:
 				if (( receivedDataLength >= 107 ) && ( receivedData[11] >= 14 )) {  //protocol version [10] hi byte [11] lo byte 
-		   	   opcode = parseArtAddress();
-		   	   sendArtPollReply(socket, receivePacket.getAddress());
-		   	}
+			   	   opcode = parseArtAddress();
+			   	   sendArtPollReply(socket, receivePacket.getAddress());
+			   	}
 		   	break;
+			case ARTNET_ART_POLL_REPLY:
+				if ( ! receivePacket.getAddress().equals(_my_address) ) {
+					if (( receivedData[174] == (byte)128) && ( _universe == receivedData[190] )) {	//port can output DMX
+						output_node = receivePacket.getAddress();
+					}
+				}    // ! from _my_address 
+				break;
+				
 		}
 		return opcode;
 	}
@@ -435,6 +450,14 @@ public class LXArtNet extends LXDMXEthernet  {
 				System.out.println("send poll exception " + e);
 			}
 		}
+	}
+	
+	/**
+	 * Sends ArtPoll using dmxsocket
+	 * * <p>If  broadcast address is set, poll is sent to that address. Otherwise does nothing.</p>
+	 */
+	public void sendArtPoll () {
+		sendArtPoll(dmxsocket);
 	}
 	
 	/**

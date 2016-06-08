@@ -92,6 +92,7 @@ boolean fading_to_x = true;
 // Auto-fade timing
 double time_fade_started;
 double duration = 3;
+double last_artnet_poll;
 
 // ***** arrays
 //       hold the current values of the x/y faders, masters and resulting output
@@ -389,13 +390,13 @@ void draw() {
         outlevels[i] = outlevel;
         if ( dmx != null ) {
           dmx.setSlot(outAddresses[i], outlevel);
-          System.out.println("set " + outAddresses[i] + " to " + outlevel);
         }
       }
     }      // for loop i in bars.length
     
     if ( dmx != null ) {
       dmx.sendDMX();
+      checkPollReply();
     }
   }
 }
@@ -406,6 +407,10 @@ void mousePressed() {
       protocol = rgOutput.selected;
       if ( protocol == OUTPUT_SACN ) {
         dmx_target_address_field.value = myMulticastAddress;
+      } else if ( protocol == OUTPUT_ARTNET ) {
+        if ( dmx_target_address_field.value.equals(myMulticastAddress) ) {
+          dmx_target_address_field.value = "";
+        }
       } else if ( protocol == OUTPUT_OFF ) {
         dmx_target_address_field.value = "";
       }
@@ -519,6 +524,32 @@ String getNextNetworkInterfaceName() {
 	} catch (Exception e) {}
 	return "";
 }
+
+void checkPollReply() {
+  if ( dmx instanceof LXArtNet ) {
+    if ((System.currentTimeMillis()- last_artnet_poll) > 10000) {
+      try {
+        DatagramSocket pollsocket = new DatagramSocket( null );
+        pollsocket.setReuseAddress(true);
+        pollsocket.bind(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), ((LXArtNet)dmx).getPort()));
+        pollsocket.setSoTimeout(500);
+        pollsocket.setBroadcast(true);
+        ((LXArtNet)dmx).sendArtPoll();
+        ((LXArtNet)dmx).readPacket(pollsocket);  //receive our poll
+        ((LXArtNet)dmx).readPacket(pollsocket);  //receive our reply to poll
+        ((LXArtNet)dmx).readPacket(pollsocket);  //hopefully receive reply from node
+        if ( ((LXArtNet)dmx).output_node != null ) {
+          System.out.println("Found Art-Net node " + ((LXArtNet)dmx).output_node);
+        }
+        pollsocket.close();
+      } catch (Exception e) {
+      }
+      last_artnet_poll = System.currentTimeMillis();
+    }
+  }
+}
+
+//*********************************  Serial  *********************************
 
 String getNextSerialPortName() {
 	serialPortIndex += 1;
