@@ -86,9 +86,9 @@ public class LXArtNet extends LXDMXEthernet  {
 	 */
 	InetAddress _dmx_source2 = null;
 	/**
-	 * IPv4 address of node found through poll reply
+	 * Object interested
 	 */
-	public InetAddress output_node = null;
+	LXArtNetPollReplyListener _reply_Listener = null;
 
 	/**
 	 * constructor initializes data buffers and local IP address
@@ -252,7 +252,7 @@ public class LXArtNet extends LXDMXEthernet  {
 	}
 
 	/**
-	 * attempt to read an Art-Net packet from socket
+	 * attempt to read an Art-Net DMX packet from socket
 	 * @param socket Open and configured socket used to receive the packet.
 	 * @return true if packet contained dmx output
 	 */
@@ -271,6 +271,41 @@ public class LXArtNet extends LXDMXEthernet  {
 			//System.out.println("readPacket exception " + e);
 		}
       return good_dmx;
+	}
+	
+	/**
+	 * attempt to read an Art-Net packet from socket
+	 * @param socket Open and configured socket used to receive the packet.
+	 * @return opcode of packet or -1 if exception
+	 */
+	public int readArtNetPacket(DatagramSocket socket) {
+		  int rv = -1;
+		  // setup a DatagramPacket.  Note that _packet_buffer is the storage for the receivePacket, zero the buffer
+		  for ( int i = 0; i < _packet_buffer.length; i++ ) {
+		    _packet_buffer[i] = 0;
+		    }
+		  DatagramPacket receivePacket = new DatagramPacket(_packet_buffer, _packet_buffer.length);
+		  try {
+		    socket.receive(receivePacket);
+		    rv = processDatagramPacket(socket, receivePacket);
+		  } catch ( Exception e) {
+		    //   will catch receive time out exception
+		    //System.out.println("readPacket exception " + e);
+		  }
+		    return rv;
+	}
+	
+	/**
+	 * Read packets until read times out or error
+	 * @param socket
+	 */
+	public void readArtNetPollPackets(DatagramSocket socket) {
+		while ( readArtNetPacket(socket) > 0 ) {
+		}
+	}
+	
+	public void setPollReplyListener(LXArtNetPollReplyListener l) {
+		_reply_Listener = l;
 	}
 	
 	/**
@@ -344,8 +379,10 @@ public class LXArtNet extends LXDMXEthernet  {
 		   	break;
 			case ARTNET_ART_POLL_REPLY:
 				if ( ! receivePacket.getAddress().equals(_my_address) ) {
-					if (( receivedData[174] == (byte)128) && ( _universe == receivedData[190] )) {	//port can output DMX
-						output_node = receivePacket.getAddress();
+					if ( _reply_Listener != null ) {
+						if ( _reply_Listener.pollReplyReceived(new LXArtNetPollReplyInfo(receivedData, receivePacket.getAddress())) ) {
+							_broadcast_address = receivePacket.getAddress();
+						}
 					}
 				}    // ! from _my_address 
 				break;

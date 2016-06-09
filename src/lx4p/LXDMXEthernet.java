@@ -35,6 +35,9 @@ import java.util.*;
 
 public abstract class LXDMXEthernet extends LXDMXInterface  {
 	
+	public static final boolean CREATE_ARTNET = false;
+	public static final boolean CREATE_SACN = true;
+	
 	/**
 	 * holds Socket for network communication
 	 */
@@ -112,7 +115,7 @@ public abstract class LXDMXEthernet extends LXDMXInterface  {
 		// look through available NetworkInterfaces for one matching networkInterface
 		// lists addresses leaving myNetworkAddress set to the last one found
 		// repeats if not found and prints interfaces
-		boolean searchDone = false;
+		boolean searchDone = (networkInterface==null);
 		boolean searched = false;
 		while ( ! searchDone ) {
 			boolean printNames = searched;

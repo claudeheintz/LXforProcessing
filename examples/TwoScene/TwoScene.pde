@@ -396,7 +396,6 @@ void draw() {
     
     if ( dmx != null ) {
       dmx.sendDMX();
-      checkPollReply();
     }
   }
 }
@@ -411,8 +410,6 @@ void mousePressed() {
         if ( dmx_target_address_field.value.equals(myMulticastAddress) ) {
           dmx_target_address_field.value = "";
         }
-      } else if ( protocol == OUTPUT_OFF ) {
-        dmx_target_address_field.value = "";
       }
       setupNetworkSocket();
     } else if ( rgOSC.mousePressed() ) {
@@ -469,15 +466,29 @@ void setupNetworkSocket() {
     dmx.close();
     dmx = null;
   }
+  
+  String interfaceToFind = network_interface_field.value;
+  if ( interfaceToFind.equals("search") ) {
+    interfaceToFind = "";
+  }
+  
   if ( protocol == OUTPUT_SACN ) {
-    dmx = LXDMXEthernet.createDMXEthernet(true, network_interface_field.value, local_ip_address_field.value, dmx_target_address_field.value);
+    dmx = LXDMXEthernet.createDMXEthernet(LXDMXEthernet.CREATE_SACN, interfaceToFind, local_ip_address_field.value, dmx_target_address_field.value);
   } else if ( protocol == OUTPUT_ARTNET ) {
     //null targetAddress means broadcast address automatically assigned
     String taddr = dmx_target_address_field.value;
     if ( taddr.length() == 0 ) {
       taddr = null;
     }
-    dmx = LXDMXEthernet.createDMXEthernet(false, network_interface_field.value, local_ip_address_field.value, taddr);
+    dmx = LXDMXEthernet.createDMXEthernet(LXDMXEthernet.CREATE_ARTNET, interfaceToFind, local_ip_address_field.value, taddr);
+    ((LXArtNet) dmx).setPollReplyListener(new LXArtNetPollReplyListener() {
+      public boolean pollReplyReceived(LXArtNetPollReplyInfo info) {
+          System.out.println("Found node:" + info.longNodeName() + " @ " + info.nodeAddress());
+          dmx_target_address_field.value = info.nodeAddress().getHostAddress();
+          return false; // set to true to automatically use found address
+        }
+    });
+    checkPollReply();
   } else if ( protocol == OUTPUT_ENTTEC ) {
     dmx = LXENTTEC.createDMXSerial(this, widget_port_name_field.value, 9600);
   }
@@ -517,35 +528,26 @@ String getNextNetworkInterfaceName() {
 		}
 		// did not find, reset and return first (if possible)
 		networkInterfaceIndex = 0;
-		nets = NetworkInterface.getNetworkInterfaces();
+		/*nets = NetworkInterface.getNetworkInterfaces();
 		if ( nets.hasMoreElements() ) {
 			return nets.nextElement().getName();
-		}
+		}*/
+    return "search";
 	} catch (Exception e) {}
 	return "";
 }
 
 void checkPollReply() {
-  if ( dmx instanceof LXArtNet ) {
-    if ((System.currentTimeMillis()- last_artnet_poll) > 10000) {
-      try {
-        DatagramSocket pollsocket = new DatagramSocket( null );
-        pollsocket.setReuseAddress(true);
-        pollsocket.bind(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), ((LXArtNet)dmx).getPort()));
-        pollsocket.setSoTimeout(500);
-        pollsocket.setBroadcast(true);
-        ((LXArtNet)dmx).sendArtPoll();
-        ((LXArtNet)dmx).readPacket(pollsocket);  //receive our poll
-        ((LXArtNet)dmx).readPacket(pollsocket);  //receive our reply to poll
-        ((LXArtNet)dmx).readPacket(pollsocket);  //hopefully receive reply from node
-        if ( ((LXArtNet)dmx).output_node != null ) {
-          System.out.println("Found Art-Net node " + ((LXArtNet)dmx).output_node);
-        }
-        pollsocket.close();
-      } catch (Exception e) {
-      }
-      last_artnet_poll = System.currentTimeMillis();
-    }
+  try {
+    DatagramSocket pollsocket = new DatagramSocket( null );
+    pollsocket.setReuseAddress(true);
+    pollsocket.bind(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), ((LXArtNet)dmx).getPort()));
+    pollsocket.setSoTimeout(500);
+    pollsocket.setBroadcast(true);
+    ((LXArtNet)dmx).sendArtPoll();
+    ((LXArtNet)dmx).readArtNetPollPackets(pollsocket);
+    pollsocket.close();
+  } catch (Exception e) {
   }
 }
 
