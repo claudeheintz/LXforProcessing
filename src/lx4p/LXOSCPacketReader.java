@@ -21,7 +21,6 @@ import java.util.*;
 public class LXOSCPacketReader  {
 	public static final int OSC_BUFFER_MAX = 400;
 	Vector<LXOSCMessage> _results;
-	boolean _inBundle;
 	
 	/**
 	 * construct a LXOSCPacketReader with an empty list of messages
@@ -39,15 +38,14 @@ public class LXOSCPacketReader  {
 	}
 	
 	/**
-	 * 
+	 * This is the main outer loop for reading a message or messages 
 	 * @param buffer byte[] containing the packet to be read
 	 * @param msglength length of packet (may be smaller that the whole buffer)
-	 * @param buffer_max the size of the buffer
 	 */
-	public void parseBuffer(byte[] buffer, int msglength, int buffer_max) {
+	public void parseBuffer(byte[] buffer, int msglength) {
 		int dataindex = 0;
 		while ( (dataindex >= 0 ) && ( dataindex < msglength ) )   {
-			dataindex = processMessageAt(buffer, dataindex, msglength, buffer_max);
+			dataindex = processMessageAt(buffer, dataindex, msglength);
 		}
 	}
 	
@@ -59,32 +57,34 @@ public class LXOSCPacketReader  {
 	 * @param buffer_max the size of the buffer
 	 * @return index of location in byte array at end of processed message
 	 */
-	public int processMessageAt(byte[] buffer, int beginindex, int msglength, int buffer_max) {
+	public int processMessageAt(byte[] buffer, int beginindex, int bytelength) {
+		int endindex = beginindex + bytelength;
+		if (endindex > buffer.length) {
+			return -1;		//supposed message overruns buffer if buffer comes from with DatagramPacket.getData(), this will never happen
+		}
+		
 		int outindex = 0;
-		int dataloc = 0;
-    
+		int dataloc = 0;   
     	int start = beginindex; 
-		 if ( _inBundle ) {
-			  start += 4;             // ignore 4 bytes bundle element size
-		 }
-		int zeroloc = nextLocationOfChar(buffer, '\0', start, msglength, buffer_max);
+
+		int zeroloc = nextLocationOfChar(buffer, '\0', start, endindex);
 	
-		if ( zeroloc + 4 < msglength ) {	//insure that cstring will terminate with room for one argument
+		if ( zeroloc + 4 < endindex ) {	//insure that cstring will terminate with room for one argument
 			String addressPattern = new String(buffer, start, zeroloc-start);
 			if ( addressPattern.startsWith("/") ) {
 			
 				int typeloc = nextIndexForString(addressPattern, start);
-				dataloc = nextIndexForIndex( nextLocationOfChar(buffer, '\0', typeloc, msglength, buffer_max));
+				dataloc = nextIndexForIndex( nextLocationOfChar(buffer, '\0', typeloc, endindex));
 			
 			
-				if ( dataloc+4 <= msglength ) {
+				if ( dataloc+4 <= endindex ) {
 					if ( buffer[typeloc] == ',' ) {
 						typeloc++;
 					}
 					boolean done = false;
 					LXOSCMessage oscmessage = new LXOSCMessage(addressPattern);
 				
-					while (( dataloc + 4 <=  msglength ) && ( ! done )) {
+					while (( dataloc + 4 <=  endindex ) && ( ! done )) {
 						if ( buffer[typeloc] == 0 ) {
 							done = true;
 						} else if ( buffer[typeloc] == 'f' ) {
@@ -104,8 +104,8 @@ public class LXOSCPacketReader  {
 							oscmessage.addArgument(data, true);
 							dataloc += 8;
 						} else if ( buffer[typeloc] == 's' ) {
-							int endofstr = nextLocationOfChar(buffer, '\0', dataloc, msglength, buffer_max);
-							if ( endofstr <= msglength ) {
+							int endofstr = nextLocationOfChar(buffer, '\0', dataloc, endindex);
+							if ( endofstr <= endindex ) {
 								String data = new String(buffer, dataloc, endofstr-dataloc);
 								oscmessage.addArgument(data);
 								dataloc = nextIndexForIndex(endofstr);
@@ -118,7 +118,7 @@ public class LXOSCPacketReader  {
 							int dlen = decode_bytes_to_int(buffer, dataloc, true);
 									dataloc += 4;
 							if ( dlen > 0 ) {
-								 if ( dlen <= buffer_max-dataloc ) {
+								 if ( dlen <= endindex-dataloc ) {
 									 oscmessage.addArgument(buffer, dataloc, dlen);
 									  dataloc += dlen;
 									  int rlen = dlen %4;             //check for padding
@@ -145,30 +145,38 @@ public class LXOSCPacketReader  {
 						typeloc ++;
 					}		//while arguments left
 					_results.addElement(oscmessage);
-				} else {                //no arguments, just the message
+				} else {               				 //no arguments, just the message
 					outindex = -1;
-					 if ( dataloc == msglength ) {
+					 if ( dataloc == endindex ) {
 						  LXOSCMessage oscmessage = new LXOSCMessage(addressPattern);
 						  _results.addElement(oscmessage);
 					 } else {
 						  System.out.println("OSC message format error. (ignored)\n");
 					 }
 				}
-			  } else {
+			  } else {											// <-address pattern does not begin with /
 					if ( addressPattern.equals("#bundle") ) {
-						 if ( start== 0 ) {
-							  dataloc = 16;            // 8 bytes #bundle\0 + 8 bytes
-							  _inBundle = true;
-						 } else {
-							 System.out.println("OSC Warning: #bundle not at start of packet. (ignored)");
-							 outindex = -1;
-						 }
+																// recursively process bundle here !
+						boolean bundleDone = false;
+						int bundleloc = nextIndexForString(addressPattern, start); // should always return start+8
+						bundleloc += 8;
+						while ( ! bundleDone ) {
+							int bundleMessageSize = ((buffer[bundleloc]&0xFF)<<24) + ((buffer[bundleloc+1]&0xFF)<<16) + ((buffer[bundleloc+2]&0xFF)<<8) + (buffer[bundleloc+3]&0xFF);
+							bundleloc += 4;
+							bundleloc = processMessageAt(buffer,bundleloc, bundleMessageSize);
+							if ( bundleloc == -1) {
+								bundleDone = true;
+							} else if ( bundleloc >= endindex ) {
+								bundleDone = true;
+							}
+						}
+						dataloc = bundleloc;
 					} else {
 						 System.out.println("OSC Warning: initial zeroloc error");
 						 outindex = -1;
 					}
 			  }
-		} else {
+		} else {												// <- no type tag string (must exist even if no arguments)
 			outindex = -1;
 			System.out.println("OSC message format error: at least one argument expected. (ignored)");
 		}
@@ -267,10 +275,10 @@ public class LXOSCPacketReader  {
 	 * @param buffer_max the maximum length of a message
 	 * @return index of char test
 	 */
-	public int nextLocationOfChar(byte[] buffer, char test, int start, int msglength, int buffer_max) { 
+	public int nextLocationOfChar(byte[] buffer, char test, int start, int endindex) { 
 		int nn;
-		int zeroloc = buffer_max + 10;	//message size must be less than LXOSC_BUFFER_MAX
-		for ( nn=start; nn<msglength; nn++) {
+		int zeroloc = endindex + 10;	//message size must be less than LXOSC_BUFFER_MAX
+		for ( nn=start; nn<endindex; nn++) {
 			if ( buffer[nn] == test ) {
 				zeroloc = nn;
 				break;

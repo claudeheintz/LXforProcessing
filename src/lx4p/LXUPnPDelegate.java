@@ -17,7 +17,7 @@ package lx4p;
  *  
  *  @version 001
  *  @author Claude Heintz
- *  @see LXUPnPDiscoverer
+ *  @see LXmDiscoverer
  */
 
 public interface LXUPnPDelegate {

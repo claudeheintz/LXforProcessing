@@ -35,6 +35,9 @@ import org.w3c.dom.*;
 
 public class LXUPnPDiscoverer extends Object implements Runnable  {
 	
+	public static byte[] UPNP_MULTICAST_ADDRESS = new byte[]{(byte)224,(byte)0,(byte)0,(byte)251};
+	public static int UPNP_MULTICAST_PORT = 1900;
+	
 	/**
 	 *  A socket for network communication
 	 */
@@ -159,7 +162,7 @@ public class LXUPnPDiscoverer extends Object implements Runnable  {
 			String message = "M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: \"ssdp:discover\"\r\nMX:3\r\nST: urn:schemas-upnp-org:device:basic:1";
 			byte[] mbytes = message.getBytes();
 			try {
-				DatagramPacket sendPacket = new DatagramPacket(mbytes, 0, mbytes.length, new InetSocketAddress(InetAddress.getByName("239.255.255.250"), 1900));
+				DatagramPacket sendPacket = new DatagramPacket(mbytes, 0, mbytes.length, new InetSocketAddress(InetAddress.getByAddress(UPNP_MULTICAST_ADDRESS), UPNP_MULTICAST_PORT));
 				udpsocket.send(sendPacket);
 			} catch ( Exception e) {
 				System.out.println("UPnP send search exception " + e);
@@ -284,7 +287,6 @@ public class LXUPnPDiscoverer extends Object implements Runnable  {
 	public static void startDiscovery(String networkInterface, String networkAddress, String target, LXUPnPDelegate d) {
 		LXUPnPDiscoverer explr = LXUPnPDiscoverer.createUPnPDiscoverer(networkInterface, networkAddress, target);
 		explr.setDelegate(d);
-		d.setLXUPnPDiscoverer(explr);
 		Thread runner = new Thread ( explr );
 		runner.start();
 	}

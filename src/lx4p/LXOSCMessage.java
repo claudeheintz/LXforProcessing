@@ -479,8 +479,17 @@ public class LXOSCMessage  {
 	 * @return length of complete OSC packet or -1 if there's an error
 	 */
 	public int addOSCMessageToBytes(byte[] buffer) {
+		return addOSCMessageToBytes(buffer, 0);
+	}
+	
+	/**
+	 * Adds the complete message to a byte[] using OSC protocol
+	 * @param buffer byte array to write into.  Must be large enough to hold address pattern, type list and arguments
+	 * @return length of complete OSC packet or -1 if there's an error
+	 */
+	public int addOSCMessageToBytes(byte[] buffer, int si) {
 		// add the address pattern
-		int ci = addAddressPatternToBytes(buffer);
+		int ci = addAddressPatternToBytes(buffer, si);
 		if ( ci < buffer.length ) {
 			
 			//add the argument types
@@ -533,7 +542,15 @@ public class LXOSCMessage  {
 	 * @return length of address pattern plus padding if needed
 	 */
 	public int addAddressPatternToBytes(byte[] buffer) {
-		int ci = 0;
+		return addAddressPatternToBytes(buffer, 0);
+	}
+	
+	/**
+	 * Adds the address pattern to byte[] beginning at index ci
+	 * @param buffer byte[] to hold address pattern
+	 * @return length of address pattern plus padding if needed
+	 */
+	public int addAddressPatternToBytes(byte[] buffer, int ci) {
 		int ce;
 		int k;
 		String estr;
