@@ -44,7 +44,7 @@ import processing.serial.*;
 // if you specify a network interface name, binding address can be set automatically
 // otherwise, set myNetworkInterface = "" and enter the local ip address of the desired interface
 // networkInterfaceIndex is used to search through available interfaces
-int networkInterfaceIndex = 0;
+int networkInterfaceIndex = -1;
 String myNetworkInterface = getNextNetworkInterfaceName();
 String myNetworkAddress = "127.0.0.1";
 
@@ -526,12 +526,8 @@ String getNextNetworkInterfaceName() {
 		  }
 		  ni ++;
 		}
-		// did not find, reset and return first (if possible)
-		networkInterfaceIndex = 0;
-		/*nets = NetworkInterface.getNetworkInterfaces();
-		if ( nets.hasMoreElements() ) {
-			return nets.nextElement().getName();
-		}*/
+		// did not find, reset and return "search"
+		networkInterfaceIndex = -1;
     return "search";
 	} catch (Exception e) {}
 	return "";
