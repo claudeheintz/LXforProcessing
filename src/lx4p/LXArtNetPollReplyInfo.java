@@ -18,7 +18,7 @@ import java.util.*;
  * 
  * <p>LXArtNetPollReplyInfo is a container class for info contained in an Art-Net poll reply.
  * 
- * <p>Art-Net(TM) Designed by and Copyright Artistic Licence (UK) Ltd</p>
+ * <p>Art-Net(TM) Designed by and Copyright Artistic Licence Holdings Ltd.</p>
 */
 
 

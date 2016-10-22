@@ -16,7 +16,7 @@ package lx4p;
  * <p>LXArtNetPollListener is an interface for objects that want to be informed when
  * an LXArtNet object receives an Art-Net Poll Reply.</p>
  * 
- * <p>Art-Net(TM) Designed by and Copyright Artistic Licence (UK) Ltd</p>
+ * <p>Art-Net(TM) Designed by and Copyright Artistic Licence Holdings Ltd.</p>
 */
 
 

@@ -23,7 +23,7 @@ import java.net.*;
  * requests.  When in receiving mode, LXArtNet supports merge of up to two Art-Net
  * packet streams from unique IP addresses.</p>
  * 
- * <p>Art-Net(TM) Designed by and Copyright Artistic Licence (UK) Ltd</p>
+ * <p>Art-Net(TM) Designed by and Copyright Artistic Licence Holdings Ltd.</p>
 */
 
 

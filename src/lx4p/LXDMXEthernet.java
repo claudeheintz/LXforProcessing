@@ -29,7 +29,7 @@ import java.util.*;
  * from the first IP address that it receives a packet from.<BR>
  * This can be reset by sending an ArtAddress cancel merge command.</p>
  * 
- * <p>Art-Net(TM) Designed by and Copyright Artistic Licence (UK) Ltd</p>
+ * <p>Art-Net(TM) Designed by and Copyright Artistic Licence Holdings Ltd.</p>
  * @author Claude Heintz
  */
 
