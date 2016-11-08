@@ -170,23 +170,38 @@ public abstract class LXDMXEthernet extends LXDMXInterface  {
 	         InetAddress maddr = InetAddress.getByName(targetAddress);	//universe 1 target = "239.255.0.1"
 	         dmx = new LXSACN(maddr);
 	         
-	         if ( networkAddress.equals("0.0.0.0") ) {
-	        	 dmx.dmxsocket = new MulticastSocket( dmx.getPort() );
-	        	 dmx.dmxsocket.setReuseAddress(true);
-	         } else {
-	        	 dmx.dmxsocket = new MulticastSocket( null);
-	        	 dmx.dmxsocket.setReuseAddress(true);
-	        	 dmx.dmxsocket.bind( new InetSocketAddress(nicAddress, dmx.getPort()) );
+	         if ( targetAddress.startsWith("239.") ) {
+		         if ( networkAddress.equals("0.0.0.0") ) {
+		        	 dmx.dmxsocket = new MulticastSocket( dmx.getPort() );
+		        	 dmx.dmxsocket.setReuseAddress(true);
+		         } else {
+		        	 dmx.dmxsocket = new MulticastSocket( null);
+		        	 dmx.dmxsocket.setReuseAddress(true);
+		        	 dmx.dmxsocket.bind( new InetSocketAddress(nicAddress, dmx.getPort()) );
+		         }
+		         
+		         dmx.dmxsocket.setSoTimeout(1000);
+		         NetworkInterface nic = NetworkInterface.getByInetAddress(nicAddress);
+		         ((MulticastSocket)dmx.dmxsocket).joinGroup(new InetSocketAddress(maddr, dmx.getPort()), nic);
+		         ((LXSACN)dmx).setCIDwithMACAddress(nic.getHardwareAddress());
+	
+		         if ( dmx != null ) {
+		  		   System.out.println("Created dmx interface using: " + myNetworkAddress + " multicast: " + targetAddress);
+		  	     }
+	         } else {	// not multicast target
+	        	 dmx.dmxsocket = new DatagramSocket( null );
+		         dmx.dmxsocket.setReuseAddress(true);
+		         if ( networkAddress.equals("0.0.0.0") ) {
+		        	 dmx.dmxsocket.bind(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), dmx.getPort()));
+		         } else {
+		        	 dmx.dmxsocket.bind(new InetSocketAddress(nicAddress, dmx.getPort()));
+		         }
+		         dmx.dmxsocket.setSoTimeout(1000);
+		         
+		         if ( dmx != null ) {
+			  		   System.out.println("Created dmx interface using: " + myNetworkAddress + " sending to: " + targetAddress);
+			  	 }
 	         }
-	         
-	         dmx.dmxsocket.setSoTimeout(1000);
-	         NetworkInterface nic = NetworkInterface.getByInetAddress(nicAddress);
-	         ((MulticastSocket)dmx.dmxsocket).joinGroup(new InetSocketAddress(maddr, dmx.getPort()), nic);
-	         ((LXSACN)dmx).setCIDwithMACAddress(nic.getHardwareAddress());
-
-	         if ( dmx != null ) {
-	  		   System.out.println("Created dmx interface using: " + myNetworkAddress + " multicast: " + targetAddress);
-	  	     }
 	         
 	      } else {               // ********* Art-Net *********
 	         InetAddress baddr;

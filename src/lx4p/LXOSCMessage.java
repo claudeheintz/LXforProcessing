@@ -174,7 +174,7 @@ public class LXOSCMessage  {
 				}
 				ai++;
 				pj++;
-			} else {		// pattern char not *
+			} else {		// pattern char not * wildcard
 				if ( ppart.charAt(pj) == apart.charAt(ai) ) {
 					ai++;
 					pj++;
@@ -200,7 +200,7 @@ public class LXOSCMessage  {
 			}
 		}
 		
-		if ( ai==apart.length() ) {
+		if (( ai==apart.length() ) && ( pj == ppart.length() )) {	//must have no remaining characters to match
 			return true;
 		}
 		
@@ -299,7 +299,10 @@ public class LXOSCMessage  {
 	 * @return true if part of message's address pattern matches string
 	 */
 	public boolean partOfPatternMatchesAddressString(int p, String s) {
-		return addressPartMatchesPatternPart(s, _address_pattern.elementAt(p));
+		if ( p < _address_pattern.size() ) {
+			return addressPartMatchesPatternPart(s, _address_pattern.elementAt(p));
+		}
+		return false;
 	}
 	
 	/**

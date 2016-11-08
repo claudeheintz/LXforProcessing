@@ -523,9 +523,9 @@ public class LXArtNet extends LXDMXEthernet  {
   		replyBuffer[9] = 0x21;
   		byte[] raw = _my_address.getAddress();
   		replyBuffer[10] = (byte)(raw[0] & 0xff);      //ip address
-  		replyBuffer[11] = (byte)(raw[1] >> 8);
-  		replyBuffer[12] = (byte)(raw[2] >> 16);
-  		replyBuffer[13] = (byte)(raw[3] >>24);
+  		replyBuffer[11] = (byte)(raw[1] & 0xff);
+  		replyBuffer[12] = (byte)(raw[2] & 0xff);
+  		replyBuffer[13] = (byte)(raw[3] & 0xff);
   		replyBuffer[14] = 0x36;    // port lo first always 0x1936
   		replyBuffer[15] = 0x19;
   		replyBuffer[16] = 0;       // firmware hi-lo

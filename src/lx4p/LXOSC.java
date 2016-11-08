@@ -120,7 +120,7 @@ public class LXOSC  {
 
 	/**
 	 * attempt to read an OSC packet from oscsocket using LXOSCPacketReader object
-	 * @return Vector of LXOSCMessage objects
+	 * @return Vector of LXOSCMessage objects (can be empty but should not be null)
 	 */
 	public Vector<LXOSCMessage> readPacket() {
 		LXOSCPacketReader pr = new LXOSCPacketReader();
@@ -209,7 +209,13 @@ public class LXOSC  {
 	
 	public void sendOSCBundle(Vector<LXOSCMessage> msgs, InetAddress to_ip, int port ) {
 		if ( oscsocket != null ) {
-		   _packet_buffer[0] = '#';
+			LXOSCBundleMessage bmsg = new LXOSCBundleMessage(msgs);
+			int msgsize = bmsg.addOSCMessageToBytes(_packet_buffer, 0);
+			if ( msgsize <= 0 ) {
+				return;
+			}
+			
+		   /*_packet_buffer[0] = '#';
 		   _packet_buffer[1] = 'b';
 		   _packet_buffer[2] = 'u';
 		   _packet_buffer[3] = 'n';
@@ -248,10 +254,10 @@ public class LXOSC  {
 			   _packet_buffer[s-2] = (byte) ((msgsize>>8) & 0xFF);
 			   _packet_buffer[s-1] = (byte) (msgsize & 0xFF);
 			   s = t + 4;	//leave room for next size bytes
-		   }
+		   }*/
 		
 		   try {
-		  		DatagramPacket sendPacket = new DatagramPacket(_packet_buffer, s-4, to_ip, port);
+		  		DatagramPacket sendPacket = new DatagramPacket(_packet_buffer, msgsize, to_ip, port);
 				oscsocket.send(sendPacket);
 			} catch ( Exception e) {
 				System.out.println("send osc exception " + e);

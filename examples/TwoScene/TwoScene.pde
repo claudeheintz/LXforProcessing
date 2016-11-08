@@ -405,7 +405,9 @@ void mousePressed() {
     if ( rgOutput.mousePressed() ) {
       protocol = rgOutput.selected;
       if ( protocol == OUTPUT_SACN ) {
-        dmx_target_address_field.value = myMulticastAddress;
+        if ( dmx_target_address_field.value.equals("") ) {
+          dmx_target_address_field.value = myMulticastAddress;
+        }
       } else if ( protocol == OUTPUT_ARTNET ) {
         if ( dmx_target_address_field.value.equals(myMulticastAddress) ) {
           dmx_target_address_field.value = "";
@@ -526,8 +528,12 @@ String getNextNetworkInterfaceName() {
 		  }
 		  ni ++;
 		}
-		// did not find, reset and return "search"
+		// did not find, reset and return first (if possible)
 		networkInterfaceIndex = -1;
+		/*nets = NetworkInterface.getNetworkInterfaces();
+		if ( nets.hasMoreElements() ) {
+			return nets.nextElement().getName();
+		}*/
     return "search";
 	} catch (Exception e) {}
 	return "";
@@ -582,7 +588,6 @@ void checkOSC() {
           if ( msg.partOfPatternMatchesAddressString(0,"1") ) {
             for (int i=0; i<bars.length; i++) {
               if ( bars[i].setValueWithOSCMessage(msg) ) {
-                System.out.println("osc= " + bars[i].getValue());
                 barlevels[i] = bars[i].getValue();
               }
             }
