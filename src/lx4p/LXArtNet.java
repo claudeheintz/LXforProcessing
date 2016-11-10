@@ -304,6 +304,12 @@ public class LXArtNet extends LXDMXEthernet  {
 		}
 	}
 	
+	public void readArtNetPollPackets() {
+		if ( dmxsocket != null ) {
+			readArtNetPollPackets(dmxsocket);
+		}
+	}
+	
 	public void setPollReplyListener(LXArtNetPollReplyListener l) {
 		_reply_Listener = l;
 	}
@@ -378,13 +384,13 @@ public class LXArtNet extends LXDMXEthernet  {
 			   	}
 		   	break;
 			case ARTNET_ART_POLL_REPLY:
-				if ( ! receivePacket.getAddress().equals(_my_address) ) {
-					if ( _reply_Listener != null ) {
-						if ( _reply_Listener.pollReplyReceived(new LXArtNetPollReplyInfo(receivedData, receivePacket.getAddress())) ) {
-							_broadcast_address = receivePacket.getAddress();
+				if ( _reply_Listener != null ) {
+					if ( _reply_Listener.pollReplyReceived(new LXArtNetPollReplyInfo(receivedData, receivePacket.getAddress())) ) {
+						if ( ! receivePacket.getAddress().equals(_my_address) ) {
+							_broadcast_address = receivePacket.getAddress();	// ! from _my_address 
 						}
 					}
-				}    // ! from _my_address 
+				}
 				break;
 				
 		}

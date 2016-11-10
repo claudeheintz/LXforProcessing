@@ -62,14 +62,14 @@ public class LXArtNetPollReplyInfo  {
 		while ( (z<packet_buffer.length) && (packet_buffer[z]!=0) ) {
 			z++;
 		}
-		nodeNameShort = new String(Arrays.copyOfRange(packet_buffer, 33, z));
+		nodeNameShort = new String(Arrays.copyOfRange(packet_buffer, 26, z));
 		
 		// locate end of short name string
 		z = 44;
 		while ( (z<packet_buffer.length) && (packet_buffer[z]!=0) ) {
 			z++;
 		}
-		nodeNameLong = new String(Arrays.copyOfRange(packet_buffer, 33, z));
+		nodeNameLong = new String(Arrays.copyOfRange(packet_buffer, 44, z));
 		ports = packet_buffer[173];
 		port1Universe = packet_buffer[190];
 		port1CanOutput = ( ( (packet_buffer[174]&0x80) == 0x80 ) && ( (packet_buffer[174]&0x3f) == 0 ) );

@@ -55,12 +55,6 @@ public abstract class LXDMXEthernet extends LXDMXInterface  {
 	 * @return true if packet contained dmx output
 	 */
 	public abstract boolean readPacket(DatagramSocket socket);
-	/**
-	 * send a dmx packet containing level data stored in the data buffer
-	 * <p>Assumes that the socket is already setup for the type of address unicast/broadcast/multicast.</p>
-	 * @param socket Open and configured socket used to read the dmx protocol packet
-	 * @param to_ip InetAddress to which packet is sent.
-	 */
 	
 	/**
 	 * attempt to read a protocol packet from this.udpsocket
@@ -72,6 +66,12 @@ public abstract class LXDMXEthernet extends LXDMXInterface  {
 		return false;
 	}
 	
+	/**
+	 * send a dmx packet containing level data stored in the data buffer
+	 * <p>Assumes that the socket is already setup for the type of address unicast/broadcast/multicast.</p>
+	 * @param socket Open and configured socket used to read the dmx protocol packet
+	 * @param to_ip InetAddress to which packet is sent.
+	 */
 	public abstract void sendDMX ( DatagramSocket socket, InetAddress to_ip );
 	/**
 	 * send a dmx packet containing level data stored in the data buffer to a preset address
@@ -216,6 +216,7 @@ public abstract class LXDMXEthernet extends LXDMXInterface  {
 	         dmx.dmxsocket.setReuseAddress(true);
 	         if ( networkAddress.equals("0.0.0.0") ) {
 	        	 dmx.dmxsocket.bind(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), dmx.getPort()));
+	        	 System.out.println("Bind to 0.0.0.0");
 	         } else {
 	        	 dmx.dmxsocket.bind(new InetSocketAddress(nicAddress, dmx.getPort()));
 	         }

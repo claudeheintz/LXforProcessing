@@ -57,6 +57,8 @@ static final int OUTPUT_SACN = 3;
 
 // ***** DMX output settings
 int protocol = OUTPUT_OFF;
+String DesiredArtNetNodeName = "";
+boolean searchForDesiredNode = false;
 
 // sACN uses multicast
 String myMulticastAddress = "239.255.0.1";
@@ -315,6 +317,13 @@ void draw() {
     rgAutoFade.draw(this);
     nicSelect_button.draw(this);
     serialSelect_button.draw(this);
+    if ( dmx != null ) {
+      if ( dmx instanceof LXArtNet ) {
+        if ( searchForDesiredNode ) {
+          checkPollReply();
+        }
+      }
+    }
   } else {
     noStroke();
     int barlevel;
@@ -487,6 +496,10 @@ void setupNetworkSocket() {
       public boolean pollReplyReceived(LXArtNetPollReplyInfo info) {
           System.out.println("Found node:" + info.longNodeName() + " @ " + info.nodeAddress());
           dmx_target_address_field.value = info.nodeAddress().getHostAddress();
+          if ( info.shortNodeName().equals(DesiredArtNetNodeName) ) {
+            ((LXArtNet) dmx).setBroadcastAddress(info.nodeAddress());
+            searchForDesiredNode = false;
+          }
           return false; // set to true to automatically use found address
         }
     });
@@ -548,6 +561,7 @@ void checkPollReply() {
     pollsocket.setBroadcast(true);
     ((LXArtNet)dmx).sendArtPoll();
     ((LXArtNet)dmx).readArtNetPollPackets(pollsocket);
+    ((LXArtNet)dmx).readArtNetPollPackets();
     pollsocket.close();
   } catch (Exception e) {
   }
