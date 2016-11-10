@@ -57,7 +57,7 @@ static final int OUTPUT_SACN = 3;
 
 // ***** DMX output settings
 int protocol = OUTPUT_OFF;
-String DesiredArtNetNodeName = "";
+String DesiredArtNetNodeName = "ArtNet2USART";
 boolean searchForDesiredNode = false;
 
 // sACN uses multicast
