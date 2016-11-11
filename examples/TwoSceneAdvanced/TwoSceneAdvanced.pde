@@ -561,7 +561,6 @@ void checkPollReply() {
     pollsocket.setBroadcast(true);
     ((LXArtNet)dmx).sendArtPoll();
     ((LXArtNet)dmx).readArtNetPollPackets(pollsocket);
-    ((LXArtNet)dmx).readArtNetPollPackets();
     pollsocket.close();
   } catch (Exception e) {
   }
