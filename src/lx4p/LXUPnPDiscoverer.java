@@ -36,12 +36,13 @@ import org.w3c.dom.*;
 public class LXUPnPDiscoverer extends Object implements Runnable  {
 	
 	public static byte[] UPNP_MULTICAST_ADDRESS = new byte[]{(byte)224,(byte)0,(byte)0,(byte)251};
+	public static byte[] UPNP_REPLY_MULTICAST_ADDRESS = new byte[]{(byte)239,(byte)255,(byte)525,(byte)250};
 	public static int UPNP_MULTICAST_PORT = 1900;
 	
 	/**
 	 *  A socket for network communication
 	 */
-	DatagramSocket udpsocket = null;
+	MulticastSocket udpsocket = null;
 	
 	/**
 	 *  The string to look for in the SSDP server: line
@@ -59,6 +60,11 @@ public class LXUPnPDiscoverer extends Object implements Runnable  {
      *  matching the target string is located and read.
 	 */
 	public LXUPnPDelegate delegate = null;
+	
+	/**
+	 *  Set to true to print contents of received packets.
+	 */
+	public boolean diagnostic = false;
 	
 	boolean searching;
 	
@@ -116,6 +122,9 @@ public class LXUPnPDiscoverer extends Object implements Runnable  {
 					rstatus = 1;
 					byte[] receivedData = receivePacket.getData();
 					String receivedString = new String(receivedData, "UTF-8");
+					if ( diagnostic ) {
+						System.out.println("UPnP packet: " + receivedString);
+					}
 					if ( receivedString.startsWith("NOTIFY * HTTP/1.1") || receivedString.startsWith("HTTP/1.1 200 OK") ) {
 						String lines[] = receivedString.split("\\r?\\n");
 						String server = null;
@@ -266,7 +275,7 @@ public class LXUPnPDiscoverer extends Object implements Runnable  {
 	      InetAddress nicAddress = InetAddress.getByName(myNetworkAddress);
 	      
 	      upnpd = new LXUPnPDiscoverer(target);
-	      upnpd.udpsocket = new DatagramSocket( null );
+	      upnpd.udpsocket = new MulticastSocket( null );
 	      upnpd.udpsocket.setReuseAddress(true);
 	         if ( networkAddress.equals("0.0.0.0") ) {
 	        	 upnpd.udpsocket.bind(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), 1900));
@@ -274,11 +283,20 @@ public class LXUPnPDiscoverer extends Object implements Runnable  {
 	        	 upnpd.udpsocket.bind(new InetSocketAddress(nicAddress, 1900));
 	         }
 	         upnpd.udpsocket.setSoTimeout(1000);
-	         upnpd.udpsocket.setBroadcast(true);
+	         //upnpd.udpsocket.setBroadcast(true);
 	   }  catch ( Exception e) {
 	      System.out.println("Can't open socket for UPnP discovery " + e);
 	      upnpd = null;
 	   }
+	   try {
+		   InetAddress nicAddress = InetAddress.getByName(myNetworkAddress);
+		   NetworkInterface nic = NetworkInterface.getByInetAddress(nicAddress);
+		   upnpd.udpsocket.joinGroup(new InetSocketAddress(InetAddress.getByAddress(UPNP_REPLY_MULTICAST_ADDRESS), UPNP_MULTICAST_PORT), nic);
+	   }  catch ( Exception e) {
+	      System.out.println("UPnP discovery could not join multicast group " + e);
+	      upnpd = null;
+	   }
+	   System.out.println("Socket for UPnP discovery at-> " + upnpd.udpsocket.getLocalAddress() + " port-> " + upnpd.udpsocket.getLocalPort());
 
 	    return upnpd;
 	}
