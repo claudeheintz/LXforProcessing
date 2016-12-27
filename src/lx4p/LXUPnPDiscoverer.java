@@ -36,7 +36,7 @@ import org.w3c.dom.*;
 public class LXUPnPDiscoverer extends Object implements Runnable  {
 	
 	public static byte[] UPNP_MULTICAST_ADDRESS = new byte[]{(byte)224,(byte)0,(byte)0,(byte)251};
-	public static byte[] UPNP_REPLY_MULTICAST_ADDRESS = new byte[]{(byte)239,(byte)255,(byte)525,(byte)250};
+	public static byte[] UPNP_ALT_MULTICAST_ADDRESS = new byte[]{(byte)239,(byte)255,(byte)255,(byte)250};
 	public static int UPNP_MULTICAST_PORT = 1900;
 	
 	/**
@@ -64,7 +64,7 @@ public class LXUPnPDiscoverer extends Object implements Runnable  {
 	/**
 	 *  Set to true to print contents of received packets.
 	 */
-	public boolean diagnostic = false;
+	public boolean diagnostic = true;
 	
 	boolean searching;
 	
@@ -171,7 +171,11 @@ public class LXUPnPDiscoverer extends Object implements Runnable  {
 			String message = "M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: \"ssdp:discover\"\r\nMX:3\r\nST: urn:schemas-upnp-org:device:basic:1";
 			byte[] mbytes = message.getBytes();
 			try {
-				DatagramPacket sendPacket = new DatagramPacket(mbytes, 0, mbytes.length, new InetSocketAddress(InetAddress.getByAddress(UPNP_MULTICAST_ADDRESS), UPNP_MULTICAST_PORT));
+				DatagramPacket sendPacket = new DatagramPacket(mbytes, 0, mbytes.length, new InetSocketAddress(InetAddress.getByAddress(UPNP_ALT_MULTICAST_ADDRESS), UPNP_MULTICAST_PORT));
+				udpsocket.send(sendPacket);
+				udpsocket.send(sendPacket);
+				udpsocket.send(sendPacket);
+				udpsocket.send(sendPacket);
 				udpsocket.send(sendPacket);
 			} catch ( Exception e) {
 				System.out.println("UPnP send search exception " + e);
@@ -283,7 +287,7 @@ public class LXUPnPDiscoverer extends Object implements Runnable  {
 	        	 upnpd.udpsocket.bind(new InetSocketAddress(nicAddress, 1900));
 	         }
 	         upnpd.udpsocket.setSoTimeout(1000);
-	         //upnpd.udpsocket.setBroadcast(true);
+	         upnpd.udpsocket.setBroadcast(true);
 	   }  catch ( Exception e) {
 	      System.out.println("Can't open socket for UPnP discovery " + e);
 	      upnpd = null;
@@ -291,7 +295,7 @@ public class LXUPnPDiscoverer extends Object implements Runnable  {
 	   try {
 		   InetAddress nicAddress = InetAddress.getByName(myNetworkAddress);
 		   NetworkInterface nic = NetworkInterface.getByInetAddress(nicAddress);
-		   upnpd.udpsocket.joinGroup(new InetSocketAddress(InetAddress.getByAddress(UPNP_REPLY_MULTICAST_ADDRESS), UPNP_MULTICAST_PORT), nic);
+		   upnpd.udpsocket.joinGroup(new InetSocketAddress(InetAddress.getByAddress(UPNP_ALT_MULTICAST_ADDRESS), UPNP_MULTICAST_PORT), nic);
 	   }  catch ( Exception e) {
 	      System.out.println("UPnP discovery could not join multicast group " + e);
 	      upnpd = null;
