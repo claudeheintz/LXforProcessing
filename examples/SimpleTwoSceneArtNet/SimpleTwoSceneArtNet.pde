@@ -27,7 +27,7 @@ import processing.serial.*;
 // networkInterfaceIndex is used to search through available interfaces
 int networkInterfaceIndex = -1;
 String myNetworkInterface = getNextNetworkInterfaceName();
-String interfaceToFind = "en1";        //may be different than this
+String interfaceToFind = "en0";        //may be different than this
 
 // ***** DMX output settings
 String desiredArtNetNodeName = "ArtNet2USART";
