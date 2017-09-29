@@ -25,7 +25,7 @@ public class LXPButton {
   int _y;
   int _w;
   int _h;
-  boolean _over;
+  public boolean over;
   public boolean outline = true;
   public String title=null;
  
@@ -64,7 +64,7 @@ public class LXPButton {
    * @param p the Processing Applet containing the button
    */
   public void draw(PApplet p) {
-    _over = overRect(_x, _y, _w, _h, p);
+    over = overRect(_x, _y, _w, _h, p);
 
     p.strokeWeight(1);
     if ( outline ) {
@@ -72,7 +72,7 @@ public class LXPButton {
     } else {
     	p.noStroke();
     }
-    if ( _over ) {
+    if ( over ) {
       if ( p.mousePressed ) {
     	  p.fill(64);
       } else {
@@ -95,7 +95,7 @@ public class LXPButton {
    * called from the applet's mouseReleased method
    */
   public void mouseReleased() {
-    if ( _over ) {
+    if ( over ) {
       mouseClicked();
     }
   }
