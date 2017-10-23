@@ -57,8 +57,11 @@ static final int OUTPUT_SACN = 3;
 
 // ***** DMX output settings
 int protocol = OUTPUT_OFF;
-String DesiredArtNetNodeName = "ArtNet2USART";
+// ***** DMX output settings
+// EDIT these settings if you don't want to search for a specific node to send DMX output
+String desiredArtNetNodeName = "my output node";
 boolean searchForDesiredNode = false;
+boolean broadcastArtDMXEnabled = true;
 
 // sACN uses multicast
 String myMulticastAddress = "239.255.0.1";
@@ -492,6 +495,7 @@ void setupNetworkSocket() {
       taddr = null;
     }
     dmx = LXDMXEthernet.createDMXEthernet(LXDMXEthernet.CREATE_ARTNET, interfaceToFind, local_ip_address_field.value, taddr);
+    ((LXArtNet) dmx).setBroadcastDMXEnabled(broadcastArtDMXEnabled);
     ((LXArtNet) dmx).setPollReplyListener(new LXArtNetPollReplyListener() {
       public boolean pollReplyReceived(LXArtNetPollReplyInfo info) {
           System.out.println("Found node:" + info.longNodeName() + " @ " + info.nodeAddress());
@@ -499,8 +503,9 @@ void setupNetworkSocket() {
           if ( info.shortNodeName().equals(DesiredArtNetNodeName) ) {
             ((LXArtNet) dmx).setBroadcastAddress(info.nodeAddress());
             searchForDesiredNode = false;
+            return true; // set to true to automatically use found address
           }
-          return false; // set to true to automatically use found address
+          return false;
         }
     });
     checkPollReply();

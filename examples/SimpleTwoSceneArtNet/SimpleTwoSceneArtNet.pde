@@ -30,8 +30,10 @@ String myNetworkInterface = getNextNetworkInterfaceName();
 String interfaceToFind = "en0";        //may be different than this
 
 // ***** DMX output settings
-String desiredArtNetNodeName = "ArtNet2USART";
-boolean searchForDesiredNode = false;
+// EDIT these settings if you don't want to search for a specific node to send DMX output
+String desiredArtNetNodeName = "my Art-Net node";
+boolean searchForDesiredNode = true;
+boolean broadcastArtDMXEnabled = false;
 
 // DMX interface object
 LXDMXInterface dmx;
@@ -250,14 +252,15 @@ void setupNetworkSocket() {
   }
 
     dmx = LXDMXEthernet.createDMXEthernet(LXDMXEthernet.CREATE_ARTNET, interfaceToFind, "0.0.0.0", null);
+    ((LXArtNet) dmx).setBroadcastDMXEnabled(broadcastArtDMXEnabled);
     ((LXArtNet) dmx).setPollReplyListener(new LXArtNetPollReplyListener() {
       public boolean pollReplyReceived(LXArtNetPollReplyInfo info) {
           System.out.println("Found node:" + info.longNodeName() + " @ " + info.nodeAddress());
           if ( info.longNodeName().equals(desiredArtNetNodeName) ) {
-            ((LXArtNet) dmx).setBroadcastAddress(info.nodeAddress());
             searchForDesiredNode = false;
+            return true; // set to true to automatically use found address
           }
-          return false; // set to true to automatically use found address
+          return false;
         }
     });
     checkPollReply();
