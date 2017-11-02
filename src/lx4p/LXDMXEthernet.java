@@ -171,13 +171,13 @@ public abstract class LXDMXEthernet extends LXDMXInterface  {
 	         dmx = new LXSACN(maddr);
 	         
 	         if ( targetAddress.startsWith("239.") ) {
-		         if ( networkAddress.equals("0.0.0.0") ) {
-		        	 dmx.dmxsocket = new MulticastSocket( dmx.getPort() );
-		        	 dmx.dmxsocket.setReuseAddress(true);
+		         if ( (networkAddress != null) && networkAddress.equals("0.0.0.0") ) {
+			        	 dmx.dmxsocket = new MulticastSocket( dmx.getPort() );
+			        	 dmx.dmxsocket.setReuseAddress(true);
 		         } else {
-		        	 dmx.dmxsocket = new MulticastSocket( null);
-		        	 dmx.dmxsocket.setReuseAddress(true);
-		        	 dmx.dmxsocket.bind( new InetSocketAddress(nicAddress, dmx.getPort()) );
+			        	 dmx.dmxsocket = new MulticastSocket( null);
+			        	 dmx.dmxsocket.setReuseAddress(true);
+			        	 dmx.dmxsocket.bind( new InetSocketAddress(nicAddress, dmx.getPort()) );
 		         }
 		         
 		         dmx.dmxsocket.setSoTimeout(1000);
@@ -189,12 +189,12 @@ public abstract class LXDMXEthernet extends LXDMXInterface  {
 		  		   System.out.println("Created dmx interface using: " + myNetworkAddress + " multicast: " + targetAddress);
 		  	     }
 	         } else {	// not multicast target
-	        	 dmx.dmxsocket = new DatagramSocket( null );
+	        	 	 dmx.dmxsocket = new DatagramSocket( null );
 		         dmx.dmxsocket.setReuseAddress(true);
-		         if ( networkAddress.equals("0.0.0.0") ) {
-		        	 dmx.dmxsocket.bind(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), dmx.getPort()));
+		         if ( (networkAddress != null) && networkAddress.equals("0.0.0.0") ) {
+		        	 	dmx.dmxsocket.bind(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), dmx.getPort()));
 		         } else {
-		        	 dmx.dmxsocket.bind(new InetSocketAddress(nicAddress, dmx.getPort()));
+		        	 	dmx.dmxsocket.bind(new InetSocketAddress(nicAddress, dmx.getPort()));
 		         }
 		         dmx.dmxsocket.setSoTimeout(1000);
 		         
@@ -206,19 +206,19 @@ public abstract class LXDMXEthernet extends LXDMXInterface  {
 	      } else {               // ********* Art-Net *********
 	         InetAddress baddr;
 	         if (( myBroadcast != null ) && (targetAddress == null)) {
-	        	 baddr = myBroadcast;
+	        	 	baddr = myBroadcast;
 	         } else {
-	        	 baddr = InetAddress.getByName(targetAddress);	//returns 127.0.0.1 if targetAddress == null ?
+	        	 	baddr = InetAddress.getByName(targetAddress);	//returns 127.0.0.1 if targetAddress == null ?
 	         }
 	         dmx = new LXArtNet(nicAddress, baddr);
 	         
 	         dmx.dmxsocket = new DatagramSocket( null );
 	         dmx.dmxsocket.setReuseAddress(true);
-	         if ( networkAddress.equals("0.0.0.0") ) {
-	        	 dmx.dmxsocket.bind(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), dmx.getPort()));
-	        	 System.out.println("Bind to 0.0.0.0");
+	         if (  (networkAddress != null) && networkAddress.equals("0.0.0.0") ) {
+	        	 	dmx.dmxsocket.bind(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), dmx.getPort()));
+	        	 	System.out.println("Bind to 0.0.0.0");
 	         } else {
-	        	 dmx.dmxsocket.bind(new InetSocketAddress(nicAddress, dmx.getPort()));
+	        	 	dmx.dmxsocket.bind(new InetSocketAddress(nicAddress, dmx.getPort()));
 	         }
 	         dmx.dmxsocket.setSoTimeout(1000);
 	         dmx.dmxsocket.setBroadcast(true);
