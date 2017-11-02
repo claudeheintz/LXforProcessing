@@ -44,8 +44,8 @@ import processing.serial.*;
 // if you specify a network interface name, binding address can be set automatically
 // otherwise, set myNetworkInterface = "" and enter the local ip address of the desired interface
 // networkInterfaceIndex is used to search through available interfaces
-int networkInterfaceIndex = -1;
-String myNetworkInterface = getNextNetworkInterfaceName();
+int networkInterfaceIndex = 0;
+String myNetworkInterface = "en0";//getNextNetworkInterfaceName();
 String myNetworkAddress = "127.0.0.1";
 
 // ***** DMX output modes.
@@ -57,11 +57,6 @@ static final int OUTPUT_SACN = 3;
 
 // ***** DMX output settings
 int protocol = OUTPUT_OFF;
-// ***** DMX output settings
-// EDIT these settings if you don't want to search for a specific node to send DMX output
-String desiredArtNetNodeName = "my output node";
-boolean searchForDesiredNode = false;
-boolean broadcastArtDMXEnabled = true;
 
 // sACN uses multicast
 String myMulticastAddress = "239.255.0.1";
@@ -71,6 +66,11 @@ int serialPortIndex = 0;
 String myPortName = getNextSerialPortName();
 // DMX interface object
 LXDMXInterface dmx;
+boolean useHardPatch = false;
+
+boolean allowBroadcastDMX = false;
+boolean searchForDesiredNode = true;
+String desiredArtNetNodeName = "my node";
 
 // ***** OSC settings
 //       select mode with radio group rgOSC
@@ -79,11 +79,11 @@ static final int OSC_ENABLED = 1;
 // OSC output target and port for receiving
 String osc_target_address_string = "127.0.0.1";
 InetAddress osc_target_address = null;
-int osc_target_port = 53010;
+int osc_target_port = 56000;
 // set the output address when OSC is received
 boolean aquire_target = true;
 // OSC input port
-int osc_receive_port = 53011;
+int osc_receive_port = 17688;
 // OSC interface object
 LXOSC myosc = null;
 
@@ -218,20 +218,21 @@ void setup() {
   }
   // Uncomment the following and use outAddresses array to set patch of slider to dmx address
   // note that array index is zero based
-  /*
-  outAddresses[0] = 1;
-  outAddresses[1] = 2;
-  outAddresses[2] = 3;
-  outAddresses[3] = 4;
-  outAddresses[4] = 5;
-  outAddresses[5] = 6;
-  outAddresses[6] = 7;
-  outAddresses[7] = 8;
-  outAddresses[8] = 9;
-  outAddresses[9] = 10;
-  outAddresses[10] = 11;
-  outAddresses[11] = 12;
-  */
+  if ( useHardPatch ) {
+    outAddresses[0] = 48;
+    outAddresses[1] = 51;
+    outAddresses[2] = 53;
+    outAddresses[3] = 74;
+    outAddresses[4] = 78;
+    outAddresses[5] = 81;
+    outAddresses[6] = 62;
+    outAddresses[7] = 64;
+    outAddresses[8] = 69;
+    outAddresses[9] = 90;
+    outAddresses[10] = 93;
+    outAddresses[11] = 94;
+  }
+
 
   rgOutput = new LXPRadioGroup(4);
   LXPRadioButton nrb = rgOutput.addButton(100, 160, 20);
@@ -287,11 +288,11 @@ void setup() {
   serialSelect_button = new LXPNextSerialPortButton(490, 113, 20, 16, ">");
   
   osc_target_ip_field = fieldGroup.addField(255,210,15, "OSC Target IP:");
-  osc_target_ip_field.value = "127.0.0.1";
+  osc_target_ip_field.value = osc_target_address_string;
   osc_target_port_field = fieldGroup.addField(255,235,6, "OSC Target Port:");
-  osc_target_port_field.value = "53010";
+  osc_target_port_field.value = Integer.toString(osc_target_port);
   osc_receive_port_field = fieldGroup.addField(255,260,6, "OSC Receive Port:");
-  osc_receive_port_field.value = "53011";
+  osc_receive_port_field.value = Integer.toString(osc_receive_port);
   
   // Network interfaces are named differently on Windows
   // adjust for ethernet
@@ -495,13 +496,12 @@ void setupNetworkSocket() {
       taddr = null;
     }
     dmx = LXDMXEthernet.createDMXEthernet(LXDMXEthernet.CREATE_ARTNET, interfaceToFind, local_ip_address_field.value, taddr);
-    ((LXArtNet) dmx).setBroadcastDMXEnabled(broadcastArtDMXEnabled);
+    ((LXArtNet)dmx).setBroadcastDMXEnabled(allowBroadcastDMX);
     ((LXArtNet) dmx).setPollReplyListener(new LXArtNetPollReplyListener() {
       public boolean pollReplyReceived(LXArtNetPollReplyInfo info) {
           System.out.println("Found node:" + info.longNodeName() + " @ " + info.nodeAddress());
-          dmx_target_address_field.value = info.nodeAddress().getHostAddress();
-          if ( info.shortNodeName().equals(DesiredArtNetNodeName) ) {
-            ((LXArtNet) dmx).setBroadcastAddress(info.nodeAddress());
+          if ( info.longNodeName().indexOf(desiredArtNetNodeName) >= 0 ) {
+            dmx_target_address_field.value = info.nodeAddress().getHostAddress();
             searchForDesiredNode = false;
             return true; // set to true to automatically use found address
           }
@@ -512,14 +512,25 @@ void setupNetworkSocket() {
   } else if ( protocol == OUTPUT_ENTTEC ) {
     dmx = LXENTTEC.createDMXSerial(this, widget_port_name_field.value, 9600);
   }
-  if ( dmx != null ) {
-    int m = bars.length;        // find highest output address
-    for(int j=0; j<outAddresses.length; j++) {
-      if ( outAddresses[j] > m ) {
-        m = outAddresses[j];
+
+}
+
+void checkPollReply() {
+  if ( searchForDesiredNode ) {
+    if ( dmx instanceof LXArtNet ) {
+      try {
+        // use a socket bound to Any address:  a socket bound to a specific address will not get broadcast replies
+        DatagramSocket pollsocket = new DatagramSocket( null );
+        pollsocket.setReuseAddress(true);
+        pollsocket.bind(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), ((LXArtNet)dmx).getPort()));
+        pollsocket.setSoTimeout(500);
+        pollsocket.setBroadcast(true);
+        ((LXArtNet)dmx).sendArtPoll();
+        ((LXArtNet)dmx).readArtNetPollPackets(pollsocket);
+        pollsocket.close();
+      } catch (Exception e) {
       }
     }
-    dmx.setNumberOfSlots(m);
   }
 }
 
@@ -546,32 +557,12 @@ String getNextNetworkInterfaceName() {
 		  }
 		  ni ++;
 		}
-		// did not find, reset and return first (if possible)
+
 		networkInterfaceIndex = -1;
-		/*nets = NetworkInterface.getNetworkInterfaces();
-		if ( nets.hasMoreElements() ) {
-			return nets.nextElement().getName();
-		}*/
-    return "search";
+    	return "search";
 	} catch (Exception e) {}
 	return "";
 }
-
-void checkPollReply() {
-  try {
-    DatagramSocket pollsocket = new DatagramSocket( null );
-    pollsocket.setReuseAddress(true);
-    pollsocket.bind(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), ((LXArtNet)dmx).getPort()));
-    pollsocket.setSoTimeout(500);
-    pollsocket.setBroadcast(true);
-    ((LXArtNet)dmx).sendArtPoll();
-    ((LXArtNet)dmx).readArtNetPollPackets(pollsocket);
-    pollsocket.close();
-  } catch (Exception e) {
-  }
-}
-
-//*********************************  Serial  *********************************
 
 String getNextSerialPortName() {
 	serialPortIndex += 1;

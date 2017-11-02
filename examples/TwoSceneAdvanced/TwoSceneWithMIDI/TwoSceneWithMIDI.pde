@@ -46,7 +46,7 @@ import themidibus.*;
 // otherwise, set myNetworkInterface = "" and enter the local ip address of the desired interface
 // networkInterfaceIndex is used to search through available interfaces
 int networkInterfaceIndex = 0;
-String myNetworkInterface = getNextNetworkInterfaceName();
+String myNetworkInterface = "en0";//getNextNetworkInterfaceName();
 String myNetworkAddress = "127.0.0.1";
 
 // ***** DMX output modes.
@@ -67,6 +67,11 @@ int serialPortIndex = 0;
 String myPortName = getNextSerialPortName();
 // DMX interface object
 LXDMXInterface dmx;
+boolean useHardPatch = false;
+
+boolean allowBroadcastDMX = false;
+boolean searchForDesiredNode = true;
+String desiredArtNetNodeName = "my node";
 
 // ***** OSC settings
 //       select mode with radio group rgOSC
@@ -75,11 +80,11 @@ static final int OSC_ENABLED = 1;
 // OSC output target and port for receiving
 String osc_target_address_string = "127.0.0.1";
 InetAddress osc_target_address = null;
-int osc_target_port = 53010;
+int osc_target_port = 56000;
 // set the output address when OSC is received
 boolean aquire_target = true;
 // OSC input port
-int osc_receive_port = 53011;
+int osc_receive_port = 17688;
 // OSC interface object
 LXOSC myosc = null;
 
@@ -99,6 +104,7 @@ boolean fading_to_x = true;
 // Auto-fade timing
 double time_fade_started;
 double duration = 3;
+double last_artnet_poll;
 
 // ***** arrays
 //       hold the current values of the x/y faders, masters and resulting output
@@ -221,20 +227,20 @@ void setup() {
   }
   // Uncomment the following and use outAddresses array to set patch of slider to dmx address
   // note that array index is zero based
-  /*
-  outAddresses[0] = 1;
-  outAddresses[1] = 2;
-  outAddresses[2] = 3;
-  outAddresses[3] = 4;
-  outAddresses[4] = 5;
-  outAddresses[5] = 6;
-  outAddresses[6] = 7;
-  outAddresses[7] = 8;
-  outAddresses[8] = 9;
-  outAddresses[9] = 10;
-  outAddresses[10] = 11;
-  outAddresses[11] = 12;
-  */
+  if ( useHardPatch ) {
+    outAddresses[0] = 48;
+    outAddresses[1] = 51;
+    outAddresses[2] = 53;
+    outAddresses[3] = 74;
+    outAddresses[4] = 78;
+    outAddresses[5] = 81;
+    outAddresses[6] = 62;
+    outAddresses[7] = 64;
+    outAddresses[8] = 69;
+    outAddresses[9] = 90;
+    outAddresses[10] = 93;
+    outAddresses[11] = 94;
+  }
 
 
   rgOutput = new LXPRadioGroup(4);
@@ -299,11 +305,11 @@ void setup() {
   serialSelect_button = new LXPNextSerialPortButton(490, 113, 20, 16, ">");
   
   osc_target_ip_field = fieldGroup.addField(255,210,15, "OSC Target IP:");
-  osc_target_ip_field.value = "127.0.0.1";
+  osc_target_ip_field.value = osc_target_address_string;
   osc_target_port_field = fieldGroup.addField(255,235,6, "OSC Target Port:");
-  osc_target_port_field.value = "53010";
+  osc_target_port_field.value = Integer.toString(osc_target_port);
   osc_receive_port_field = fieldGroup.addField(255,260,6, "OSC Receive Port:");
-  osc_receive_port_field.value = "53011";
+  osc_receive_port_field.value = Integer.toString(osc_receive_port);
   
   midi_device_name_field = fieldGroup.addField(255,330,6, "Device Name:");
   midi_device_name_field.value = "SLIDER/KNOB";
@@ -336,6 +342,13 @@ void draw() {
     rgMIDI.draw(this);
     nicSelect_button.draw(this);
     serialSelect_button.draw(this);
+    if ( dmx != null ) {
+      if ( dmx instanceof LXArtNet ) {
+        if ( searchForDesiredNode ) {
+          checkPollReply();
+        }
+      }
+    }
   } else {
     noStroke();
     int barlevel;
@@ -426,9 +439,13 @@ void mousePressed() {
     if ( rgOutput.mousePressed() ) {
       protocol = rgOutput.selected;
       if ( protocol == OUTPUT_SACN ) {
-        dmx_target_address_field.value = myMulticastAddress;
-      } else if ( protocol == OUTPUT_OFF ) {
-        dmx_target_address_field.value = "";
+        if ( dmx_target_address_field.value.equals("") ) {
+          dmx_target_address_field.value = myMulticastAddress;
+        }
+      } else if ( protocol == OUTPUT_ARTNET ) {
+        if ( dmx_target_address_field.value.equals(myMulticastAddress) ) {
+          dmx_target_address_field.value = "";
+        }
       }
       setupNetworkSocket();
     } else if ( rgOSC.mousePressed() ) {
@@ -491,20 +508,56 @@ void setupNetworkSocket() {
     dmx.close();
     dmx = null;
   }
+  
+  String interfaceToFind = network_interface_field.value;
+  if ( interfaceToFind.equals("search") ) {
+    interfaceToFind = "";
+  }
+  
   if ( protocol == OUTPUT_SACN ) {
-    dmx = LXDMXEthernet.createDMXEthernet(true, network_interface_field.value, local_ip_address_field.value, dmx_target_address_field.value);
+    dmx = LXDMXEthernet.createDMXEthernet(LXDMXEthernet.CREATE_SACN, interfaceToFind, local_ip_address_field.value, dmx_target_address_field.value);
   } else if ( protocol == OUTPUT_ARTNET ) {
     //null targetAddress means broadcast address automatically assigned
     String taddr = dmx_target_address_field.value;
     if ( taddr.length() == 0 ) {
       taddr = null;
     }
-    dmx = LXDMXEthernet.createDMXEthernet(false, network_interface_field.value, local_ip_address_field.value, taddr);
+    dmx = LXDMXEthernet.createDMXEthernet(LXDMXEthernet.CREATE_ARTNET, network_interface_field.value, local_ip_address_field.value, taddr);
+    ((LXArtNet)dmx).setBroadcastDMXEnabled(allowBroadcastDMX);
+    ((LXArtNet) dmx).setPollReplyListener(new LXArtNetPollReplyListener() {
+      public boolean pollReplyReceived(LXArtNetPollReplyInfo info) {
+          System.out.println("Found node:" + info.longNodeName() + " @ " + info.nodeAddress());
+          if ( info.longNodeName().indexOf(desiredArtNetNodeName) >= 0 ) {
+            dmx_target_address_field.value = info.nodeAddress().getHostAddress();
+            searchForDesiredNode = false;
+            return true; // set to true to automatically use found address
+          }
+          return false;
+        }
+    });
+    checkPollReply();
   } else if ( protocol == OUTPUT_ENTTEC ) {
     dmx = LXENTTEC.createDMXSerial(this, widget_port_name_field.value, 9600);
   }
-  if ( dmx != null ) {
-    dmx.setNumberOfSlots(bars.length);
+
+}
+
+void checkPollReply() {
+  if ( searchForDesiredNode ) {
+    if ( dmx instanceof LXArtNet ) {
+      try {
+        // use a socket bound to Any address:  a socket bound to a specific address will not get broadcast replies
+        DatagramSocket pollsocket = new DatagramSocket( null );
+        pollsocket.setReuseAddress(true);
+        pollsocket.bind(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), ((LXArtNet)dmx).getPort()));
+        pollsocket.setSoTimeout(500);
+        pollsocket.setBroadcast(true);
+        ((LXArtNet)dmx).sendArtPoll();
+        ((LXArtNet)dmx).readArtNetPollPackets(pollsocket);
+        pollsocket.close();
+      } catch (Exception e) {
+      }
+    }
   }
 }
 
@@ -531,12 +584,9 @@ String getNextNetworkInterfaceName() {
 		  }
 		  ni ++;
 		}
-		// did not find, reset and return first (if possible)
-		networkInterfaceIndex = 0;
-		nets = NetworkInterface.getNetworkInterfaces();
-		if ( nets.hasMoreElements() ) {
-			return nets.nextElement().getName();
-		}
+
+		networkInterfaceIndex = -1;
+    	return "search";
 	} catch (Exception e) {}
 	return "";
 }
@@ -571,20 +621,20 @@ void checkOSC() {
 
         for ( int k=0; k<msgs.size(); k++ ) {
           LXOSCMessage msg = msgs.elementAt(k);
-          if ( msg.addressElementAt(0).equals("1") ) {
+          if ( msg.addressPartAt(0).equals("1") ) {
             for (int i=0; i<bars.length; i++) {
               if ( bars[i].setValueWithOSCMessage(msg) ) {
                 barlevels[i] = bars[i].getValue();
               }
             }
-          } else if ( msg.addressElementAt(0).equals("2") ) {
+          } else if ( msg.addressPartAt(0).equals("2") ) {
             for (int i=0; i<barsy.length; i++) {
               if ( barsy[i].setValueWithOSCMessage(msg) ) {
                 barylevels[i] = barsy[i].getValue();
               }
             }
-          } else if ( msg.addressElementAt(0).equals("3") ) {
-            if ( msg.addressElementAt(1).equals("push1") ) {
+          } else if ( msg.addressPartAt(0).equals("3") ) {
+            if ( msg.addressPartAt(1).equals("push1") ) {
               if (( rgAutoFade.selected == AUTO_FADE_ENABLED ) && ( msg.floatAt(0) > 0 )) {
                 startFade();
               }

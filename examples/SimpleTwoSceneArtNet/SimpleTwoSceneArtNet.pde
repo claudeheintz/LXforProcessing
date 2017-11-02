@@ -301,16 +301,21 @@ String getNextNetworkInterfaceName() {
 }
 
 void checkPollReply() {
-  try {
-    DatagramSocket pollsocket = new DatagramSocket( null );
-    pollsocket.setReuseAddress(true);
-    pollsocket.bind(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), ((LXArtNet)dmx).getPort()));
-    pollsocket.setSoTimeout(500);
-    pollsocket.setBroadcast(true);
-    ((LXArtNet)dmx).sendArtPoll();
-    ((LXArtNet)dmx).readArtNetPollPackets(pollsocket);
-    pollsocket.close();
-  } catch (Exception e) {
+  if ( searchForDesiredNode ) {
+    if ( dmx instanceof LXArtNet ) {
+      try {
+        // use a socket bound to Any address:  a socket bound to a specific address will not get broadcast replies
+        DatagramSocket pollsocket = new DatagramSocket( null );
+        pollsocket.setReuseAddress(true);
+        pollsocket.bind(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), ((LXArtNet)dmx).getPort()));
+        pollsocket.setSoTimeout(500);
+        pollsocket.setBroadcast(true);
+        ((LXArtNet)dmx).sendArtPoll();
+        ((LXArtNet)dmx).readArtNetPollPackets(pollsocket);
+        pollsocket.close();
+      } catch (Exception e) {
+      }
+    }
   }
 }
 
