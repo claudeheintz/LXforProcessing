@@ -44,7 +44,7 @@ public class LXSACN extends LXDMXEthernet  {
 	/**
 	 * number of slots aka addresses or channels
 	 */
-	int _dmx_slots = 0;
+	int _dmx_slots = DMX_UNIVERSE_MAX;
 	/**
 	 * dmx universe 1-32767
 	 */
@@ -91,7 +91,6 @@ public class LXSACN extends LXDMXEthernet  {
 				my_cid[n] = 0;
 			}
 		}
-		_dmx_slots =  DMX_MIN_SLOTS;
 		clearSlots();
 	}
 	
@@ -110,7 +109,6 @@ public class LXSACN extends LXDMXEthernet  {
 				my_cid[n] = 0;
 			}
 		}
-		_dmx_slots =  DMX_MIN_SLOTS;
 		clearSlots();
 		setMulticastAddress(maddr);
 	}

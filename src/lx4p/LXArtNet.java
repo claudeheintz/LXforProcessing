@@ -56,7 +56,7 @@ public class LXArtNet extends LXDMXEthernet  {
 	/**
 	 * number of slots aka addresses or channels
 	 */
-	int _dmx_slots = 512;
+	int _dmx_slots = DMX_UNIVERSE_MAX;
 	/**
 	 * high nibble subnet, low nibble universe
 	 */
@@ -105,7 +105,6 @@ public class LXArtNet extends LXDMXEthernet  {
 	 */
 	public LXArtNet(InetAddress myaddress) {
 	   _my_address = myaddress;
-	   _dmx_slots = DMX_MIN_SLOTS;
 	   clearSlots();
 	}
 	/**
@@ -119,7 +118,6 @@ public class LXArtNet extends LXDMXEthernet  {
 	public LXArtNet(InetAddress myaddress, InetAddress baddr) {
 		_my_address = myaddress;
 		setBroadcastAddress(baddr);
-		_dmx_slots = DMX_MIN_SLOTS;
 	   clearSlots();
 	}
 	
