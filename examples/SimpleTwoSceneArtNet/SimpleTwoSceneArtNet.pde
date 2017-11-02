@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015-2016 by Claude Heintz Design
+ * Copyright (c) 2015-2017 by Claude Heintz Design
  *
  * This file is part of a library called LXforProcessing - https://github.com/claudeheintz/LXforProcessing
  * 
@@ -23,15 +23,13 @@ import processing.serial.*;
 
 //*********************************  Control Variables  *********************************
 
-// if you specify a network interface name, binding address can be set automatically
-// networkInterfaceIndex is used to search through available interfaces
-int networkInterfaceIndex = -1;
-String myNetworkInterface = getNextNetworkInterfaceName();
-String interfaceToFind = "en0";        //may be different than this
+// If you specify a network interface name, binding address can be set automatically
+// Note on your computer, your desired NIC may be different than this
+String interfaceToFind = "en0";    
 
 // ***** DMX output settings
 // EDIT these settings if you don't want to search for a specific node to send DMX output
-String desiredArtNetNodeName = "my Art-Net node";
+String desiredArtNetNodeName = "HDoubler Light Booth";//"my Art-Net node";
 boolean searchForDesiredNode = true;
 boolean broadcastArtDMXEnabled = false;
 
@@ -149,6 +147,9 @@ void draw() {
   background(255);
   stroke(0);
   mode_button.draw(this);
+  
+  // The draw loop operates in two modes, setup and run
+  // In setup mode, ArtPolls are sent to find the desired target node.
   if ( setup_mode ) {
     if ( dmx != null ) {
       if ( dmx instanceof LXArtNet ) {
@@ -158,6 +159,9 @@ void draw() {
       }
     }
   } else {
+    // In Run Mode, the sliders are drawn and their values are used to set slots in the LXArtNet dmx object.
+    // The dmx objects then sends an ArtDMX packet containing its current slots.
+    
     noStroke();
     int barlevel;
     int barylevel;
@@ -219,6 +223,8 @@ void draw() {
       }
     }      // for loop i in bars.length
     
+    
+    // Here's all it takes to send the accumulated DMXSlot values in an ArtDMX packet.
     if ( dmx != null ) {
       dmx.sendDMX();
     }
@@ -251,8 +257,18 @@ void setupNetworkSocket() {
     dmx = null;
   }
 
+  // The factory method createDMXEthernet does all the necessary work to make and bind
+  // a DatagramSocket and assigns it to a new LXArtNet object that can then be used to
+  // send and receive Art-Net.
+  // If interfaceToFind matches a NIC, the broadcast address is set using that interface's IP address and subnet
+  // The DatagramSocket is bound to "0.0.0.0" or ANY_ADDRESS.  To bind specifically to the NIC, change this and pass null
+  // The target address will be found using polling so null is passed as the last parameter
     dmx = LXDMXEthernet.createDMXEthernet(LXDMXEthernet.CREATE_ARTNET, interfaceToFind, "0.0.0.0", null);
-    ((LXArtNet) dmx).setBroadcastDMXEnabled(broadcastArtDMXEnabled);
+    
+    ((LXArtNet) dmx).setBroadcastDMXEnabled(broadcastArtDMXEnabled);// broadcast is disabled by default
+    
+    // create an LXArtNetPollReplyListener to process ArtPoll replies and set the target address
+    // when the desired node is found
     ((LXArtNet) dmx).setPollReplyListener(new LXArtNetPollReplyListener() {
       public boolean pollReplyReceived(LXArtNetPollReplyInfo info) {
           System.out.println("Found node:" + info.longNodeName() + " @ " + info.nodeAddress());
@@ -263,43 +279,18 @@ void setupNetworkSocket() {
           return false;
         }
     });
+    
     checkPollReply();
-  
-  if ( dmx != null ) {
-    int m = bars.length;        // find highest output address
-    for(int j=0; j<outAddresses.length; j++) {
-      if ( outAddresses[j] > m ) {
-        m = outAddresses[j];
-      }
-    }
-    dmx.setNumberOfSlots(m);
-  }
+ 
 }
 
-
-String getNextNetworkInterfaceName() {
-	networkInterfaceIndex += 1;
-	int ni = 0;
-	try {
-		Enumeration<NetworkInterface> nets = NetworkInterface.getNetworkInterfaces();
-		while ( nets.hasMoreElements() ) {
-		  NetworkInterface nic = nets.nextElement();
-		  if ( ni == networkInterfaceIndex ) {
-				return nic.getName();
-		  }
-		  ni ++;
-		}
-		// did not find, reset and return first (if possible)
-		networkInterfaceIndex = -1;
-		/*nets = NetworkInterface.getNetworkInterfaces();
-		if ( nets.hasMoreElements() ) {
-			return nets.nextElement().getName();
-		}*/
-    return "search";
-	} catch (Exception e) {}
-	return "";
-}
-
+/*
+ * checkPollReply()
+ * If searchingForDesired Node, this uses a socket bound to "any address" to
+ * broadcast an Art-Net Poll and receive replies to it.
+ * The LXArtNet object has a listerner object that deals with the replies
+ * (see setupNetworkSocket).
+*/
 void checkPollReply() {
   if ( searchForDesiredNode ) {
     if ( dmx instanceof LXArtNet ) {
