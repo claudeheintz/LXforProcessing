@@ -65,6 +65,7 @@ public class LXmDNSDiscoverer extends Object implements Runnable  {
 	public static int LXMDNS_PRINT_SILENT = 0;
 	public static int LXMDNS_PRINT_ERRORS = 1;
 	public static int LXMDNS_PRINT_ALL = 2;
+	
 	int printlevel = LXMDNS_PRINT_SILENT;
 	
 	/**
@@ -79,43 +80,66 @@ public class LXmDNSDiscoverer extends Object implements Runnable  {
 	
 	/**
 	 * @param target string to look for in fully qualified domain name string
+	 * @param type is the type of record desired
 	 */
 	public LXmDNSDiscoverer(String target, int type) {
 		targetName = target;
 		targetType = type;
 	}
 	
+	/**
+	 * @param d LXmDNSDelegate to receive notification of records and queries received
+	 */
 	public void setDelegate(LXmDNSDelegate d) {
 		delegate = d;
 		d.setLXmDNSDiscoverer(this);
 	}
 	
+	/**
+	 * @param v level of messages printed, LXMDNS_PRINT_SILENT, LXMDNS_PRINT_ERRORS, or LXMDNS_PRINT_ALL
+	 */
 	public void setPrintLevel(int v) {
 		printlevel = v;
 	}
 	
+	/**
+	 * @param sm sets search mode
+	 */
 	public void setSearchMode(boolean sm) {
 		searchMode = sm;
 	}
 	
+	/**
+	 * @param estr is printed unless silent
+	 */
 	public void printError( String estr ) {
 		if ( printlevel > LXMDNS_PRINT_SILENT ) {
 			System.out.println(estr);
 		}
 	}
 	
+	/**
+	 * @param level to check if not silent
+	 * @param estr is printed unless silent
+	 */
 	public static void printError(int level, String estr) {
 		if ( level > LXMDNS_PRINT_SILENT ) {
 			System.out.println(estr);
 		}
 	}
 
+	/**
+	 * @param mstr is printed unless silent
+	 */
 	public void printMessage(String mstr) {
 		if ( printlevel > 1 ) {
 			System.out.println(mstr);
 		}
 	}
 	
+	/**
+	 * @param run is used to execute search/discovery on a thread
+	 */
 	public void run() {
 		listening = true;
 		long lastSearchSent = 0;
@@ -189,6 +213,7 @@ public class LXmDNSDiscoverer extends Object implements Runnable  {
 	
 	/**
 	 * Attempt to read an mDNS packet from multisocket
+	 * @return integer indicating status of attempt to read mDNS packet
 	 */
 	public int readPacket() {
 		int rstatus = 0;
@@ -230,6 +255,7 @@ public class LXmDNSDiscoverer extends Object implements Runnable  {
 			    	for(int i=0; i<answerRecords; i++) {
 			    		rr = readReplyRecordFromPacket(bpacket, s, isQuery);
 			    		rr.setPacketID(_packetID);
+			    		rr.setAddress(receivePacket.getAddress());
 			    		printMessage("answer" + (i+1) + ": " + rr.getName() + ", " + rr.getQType() + ", " + rr.getQClass());
 			    		if ( delegate != null ) {
 			    			delegate.receivedMDNSQueryAnswerRecord(rr);
@@ -278,7 +304,8 @@ public class LXmDNSDiscoverer extends Object implements Runnable  {
 			for ( ; s<12; s++ ) {
 				mbytes[s] = 0;
 			}
-			mbytes[5] = 1;	// one question record
+			mbytes[5] = 1;	// one question record 
+			// add labels (like pascal strings length followed by characters)
 			for(int i=0; i<labels.length; i++) {
 				try {
 					byte[] sbytes = labels[i].getBytes("UTF-8");
@@ -332,6 +359,9 @@ public class LXmDNSDiscoverer extends Object implements Runnable  {
 	 * Factory method to create an LXmDNSDiscoverer
 	 * @param networkInterface if not null, searches for an InetAddress associated with the named interface (eg "en0")
 	 * @param networkAddress specific IP address to use for binding socket.  Can be null if networkInterface is specified
+	 * @param target is the desired name passed to the LXmDNSDiscoverer constructor
+	 * @param type is passed to the LXmDNSDiscoverer constructor
+	 * @param printing indicated what level of messages should be printed
 	 * @return created instance of LXUPnPDiscovereror null if socket could not be opened
 	 */
 	

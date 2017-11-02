@@ -97,7 +97,7 @@ public abstract class LXDMXInterface extends Object  {
 	
 
 	/**
-	 * conversion utility byte->int
+	 * conversion utility byte to int
 	 * <p>Java seems to do a straight cast to int from byte as if the byte is signed</p>
 	 * @param b byte to convert
 	 * @return int value of unsigned byte

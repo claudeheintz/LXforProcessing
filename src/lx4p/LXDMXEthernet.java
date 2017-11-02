@@ -224,7 +224,7 @@ public abstract class LXDMXEthernet extends LXDMXInterface  {
 	         dmx.dmxsocket.setBroadcast(true);
 	         
 	         if ( dmx != null ) {
-	  		   System.out.println("Created dmx interface using: " + myNetworkAddress + " sending to: " + baddr.getHostAddress());
+	  		   System.out.println("Created dmx interface using: " + myNetworkAddress + " broadcast: " + baddr.getHostAddress());
 	  	     }
 	      }
 	   }  catch ( Exception e) {
@@ -235,4 +235,20 @@ public abstract class LXDMXEthernet extends LXDMXInterface  {
 	    return dmx;
 	}
 	
+	public static void  setStringInByteArray(String str, byte[] barr, int index, boolean terminate) {
+		byte[] sbytes = str.getBytes();
+		int total = index + sbytes.length;
+		if ( terminate ) {
+			total++;
+		}
+		if ( total >= barr.length ) {
+			return; // not enough room 
+		}
+		for (int i=0; i<sbytes.length; i++) {
+			barr[i+index] = sbytes[i];
+		}
+		if ( terminate ) {
+			barr[index+sbytes.length] = 0;
+		}
+	}
 }

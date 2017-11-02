@@ -42,6 +42,7 @@ public class LXJSONElement {
 	
 	/**
 	 * construct an element that is a sub-element of a parent element
+	 * @param p construct with a JSONElement
 	 */
 	public LXJSONElement(LXJSONElement p) {
 		this("", "", p);

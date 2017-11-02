@@ -56,7 +56,7 @@ public class LXArtNet extends LXDMXEthernet  {
 	/**
 	 * number of slots aka addresses or channels
 	 */
-	int _dmx_slots = 0;
+	int _dmx_slots = 512;
 	/**
 	 * high nibble subnet, low nibble universe
 	 */
@@ -86,7 +86,16 @@ public class LXArtNet extends LXDMXEthernet  {
 	 */
 	InetAddress _dmx_source2 = null;
 	/**
-	 * Object interested
+	 * Address of node to send output
+	 */
+	InetAddress _output_node_address = null;
+	/**
+	 *  controls if ArtDMX is broadcast if sendDMX is called without a specific destination address
+	 */
+	boolean _broadcast_dmx_enabled = false;
+	
+	/**
+	 * Object interested in received ArtPoll replies
 	 */
 	LXArtNetPollReplyListener _reply_Listener = null;
 
@@ -156,6 +165,7 @@ public class LXArtNet extends LXDMXEthernet  {
 		for(int j=0; j<DMX_UNIVERSE_MAX; j++) {
 			_dmx_buffer1[j] = 0;
 			_dmx_buffer2[j] = 0;
+			_packet_buffer[18+j] = 0;	//clear output in case less than full number of slots are sent...
 		}
 	}
 	
@@ -250,6 +260,22 @@ public class LXArtNet extends LXDMXEthernet  {
 	public void setBroadcastAddress(InetAddress baddr) {
 		_broadcast_address = baddr;
 	}
+	
+	/**
+	 * allows broadcast address to be used to send ArtDMX when a specific address is not specified
+	 * @param en enables broadcastDMX
+	 */
+	public void setBroadcastDMXEnabled(boolean en) {
+		_broadcast_dmx_enabled = en;
+	}
+	
+	/**
+	 * sets dmx output address address
+	 * @param outaddr address to send ArtDMX when no specific address is specified
+	 */
+	public void setOutputAddress(InetAddress outaddr) {
+		_output_node_address = outaddr;
+	}
 
 	/**
 	 * attempt to read an Art-Net DMX packet from socket
@@ -297,7 +323,7 @@ public class LXArtNet extends LXDMXEthernet  {
 	
 	/**
 	 * Read packets until read times out or error
-	 * @param socket
+	 * @param socket DatagramSocket to be used to read available ArtPoll replies
 	 */
 	public void readArtNetPollPackets(DatagramSocket socket) {
 		while ( readArtNetPacket(socket) > 0 ) {
@@ -387,7 +413,7 @@ public class LXArtNet extends LXDMXEthernet  {
 				if ( _reply_Listener != null ) {
 					if ( _reply_Listener.pollReplyReceived(new LXArtNetPollReplyInfo(receivedData, receivePacket.getAddress())) ) {
 						if ( ! receivePacket.getAddress().equals(_my_address) ) {
-							_broadcast_address = receivePacket.getAddress();	// ! from _my_address 
+							_output_node_address = receivePacket.getAddress();	// ! from _my_address 
 						}
 					}
 				}
@@ -404,14 +430,7 @@ public class LXArtNet extends LXDMXEthernet  {
 	 * @param to_ip address to which packet is sent
 	 */
 	public void sendDMX ( DatagramSocket socket, InetAddress to_ip ) {
-		_packet_buffer[0] = 'A';
-		_packet_buffer[1] = 'r';
-		_packet_buffer[2] = 't';
-		_packet_buffer[3] = '-';
-		_packet_buffer[4] = 'N';
-		_packet_buffer[5] = 'e';
-		_packet_buffer[6] = 't';
-		_packet_buffer[7] = 0;
+		setStringInByteArray("Art-Net", _packet_buffer, 0, true);
 		_packet_buffer[8] = 0;        //op code lo-hi
 		_packet_buffer[9] = 0x50;
 		_packet_buffer[10] = 0;
@@ -445,14 +464,16 @@ public class LXArtNet extends LXDMXEthernet  {
 	}
 	
 	/**
-	 * Sends Art-Net DMX packet to member variable broadcast address using socket.
+	 * Sends Art-Net DMX packet to member output node address using socket.
 	 * <p>Assumes that the socket is already setup for the type of address (unicast or broadcast).</p>
 	 * <p>Does nothing if broadcast address is not set</p>
 	 * @see #_broadcast_address
 	 * @param socket Open and configured socket used to send the packet.
 	 */
 	public void sendDMX ( DatagramSocket socket ) {
-		if ( _broadcast_address != null ) {
+		if ( _output_node_address != null ) {
+			sendDMX(socket, _output_node_address	);
+		} else if ( _broadcast_dmx_enabled && ( _broadcast_address != null )) {
 			sendDMX(socket, _broadcast_address);
 		}
 	}
@@ -470,14 +491,7 @@ public class LXArtNet extends LXDMXEthernet  {
 	  		for ( i = 0; i < ARTNET_POLL_SIZE; i++ ) {
 	  			pollBuffer[i] = 0;
 	  		}
-	  		pollBuffer[0] = 'A';
-	  		pollBuffer[1] = 'r';
-	  		pollBuffer[2] = 't';
-	  		pollBuffer[3] = '-';
-	  		pollBuffer[4] = 'N';
-	  		pollBuffer[5] = 'e';
-	  		pollBuffer[6] = 't';
-	  		pollBuffer[7] = 0;
+	  		setStringInByteArray("Art-Net", pollBuffer, 0, true);
 	  		pollBuffer[8] = 0;        // op code lo-hi
 	  		pollBuffer[9] = (byte)0x20;
 	  		pollBuffer[10] = 0;
@@ -517,14 +531,7 @@ public class LXArtNet extends LXDMXEthernet  {
   		for ( i = 0; i < ARTNET_REPLY_SIZE; i++ ) {
 		 replyBuffer[i] = 0;
   		}
-  		replyBuffer[0] = 'A';
-  		replyBuffer[1] = 'r';
-  		replyBuffer[2] = 't';
-  		replyBuffer[3] = '-';
-  		replyBuffer[4] = 'N';
-  		replyBuffer[5] = 'e';
-  		replyBuffer[6] = 't';
-  		replyBuffer[7] = 0;
+  		setStringInByteArray("Art-Net", replyBuffer, 0, true);
   		replyBuffer[8] = 0;        // op code lo-hi
   		replyBuffer[9] = 0x21;
   		byte[] raw = _my_address.getAddress();
@@ -544,22 +551,10 @@ public class LXArtNet extends LXDMXEthernet  {
   		replyBuffer[23] = 0;       // status
   		replyBuffer[24] = 0x50;    //     Mfg Code
   		replyBuffer[25] = 0x12;    //     seems DMX workshop reads these bytes backwards
-  		replyBuffer[26] = 'A';     // short name
-  		replyBuffer[27] = 'r';
-  		replyBuffer[28] = 'd';
-  		replyBuffer[29] = 'u';
-  		replyBuffer[30] = 'i';
-  		replyBuffer[31] = 'n';
-  		replyBuffer[32] = 'o';
-  		replyBuffer[33] =  0;
-  		replyBuffer[44] = 'A';     // long name
-  		replyBuffer[45] = 'r';
-  		replyBuffer[46] = 'd';
-  		replyBuffer[47] = 'u';
-  		replyBuffer[48] = 'i';
-  		replyBuffer[49] = 'n';
-  		replyBuffer[50] = 'o';
-  		replyBuffer[51] =  0;
+  		
+  		setStringInByteArray("LXforProcessing", replyBuffer, 26, true);// short name
+  		setStringInByteArray("LXforProcessing", replyBuffer, 44, true);// short name// long name
+  		
   		replyBuffer[173] = 1;    // number of ports
   		replyBuffer[174] = (byte)128;  // can output from network
   		replyBuffer[182] = (byte)128;  //  good output... change if error
@@ -590,14 +585,7 @@ public class LXArtNet extends LXDMXEthernet  {
   		for ( i = 0; i < ARTNET_ART_ADDRESS_SIZE; i++ ) {
   			buffer[i] = 0;
   		}
-  		buffer[0] = 'A';
-  		buffer[1] = 'r';
-  		buffer[2] = 't';
-  		buffer[3] = '-';
-  		buffer[4] = 'N';
-  		buffer[5] = 'e';
-  		buffer[6] = 't';
-  		buffer[7] = 0;
+  		setStringInByteArray("Art-Net", buffer, 0, true);
   		buffer[8] = 0;        // op code lo-hi
   		buffer[9] = (byte)0x21;
   		buffer[10] = 0;        // op code hi-lo

@@ -53,9 +53,8 @@ public class LXOSCPacketReader  {
 	 * Process a number of bytes of a message (a bundle can contain more than one message in a single packet)
 	 * @param buffer byte[] containing the packet to be read
 	 * @param beginindex index of starting byte in buffer to read
-	 * @param msglength length of packet (may be smaller that the whole buffer)
-	 * @param buffer_max the size of the buffer
-	 * @return index of location in byte array at end of processed message
+	 * @param bytelength length of packet (may be smaller that the whole buffer)
+	 * @return index in byte[] after a single processing message
 	 */
 	public int processMessageAt(byte[] buffer, int beginindex, int bytelength) {
 		int endindex = beginindex + bytelength;
@@ -271,8 +270,7 @@ public class LXOSCPacketReader  {
 	 * @param buffer the byte[]
 	 * @param test the character you are looking for
 	 * @param start the starting index
-	 * @param msglength	the length of the message withing the byte[]
-	 * @param buffer_max the maximum length of a message
+	 * @param endindex the length of the message within the byte[]
 	 * @return index of char test
 	 */
 	public int nextLocationOfChar(byte[] buffer, char test, int start, int endindex) { 

@@ -35,6 +35,7 @@ public class LXOSCMessage  {
 	
 	/**
 	 * construct OSC message with list of address pattern parts
+	 * @param addressPattern is a list of strings containing address pattern parts
 	 */
 	public LXOSCMessage(Vector<String> addressPattern) {
 		_address_pattern = addressPattern;
@@ -43,6 +44,7 @@ public class LXOSCMessage  {
 	
 	/**
 	 * construct OSC message with list of address pattern parts
+	 * @param pstr address pattern
 	 */
 	public LXOSCMessage(String pstr) {
 		setAddressPattern(pstr);
@@ -75,7 +77,7 @@ public class LXOSCMessage  {
 	
 	/**
 	 * utility for creating an address pattern list from a string
-	 * @param pstr
+	 * @param pstr the address pattern
 	 * @return Vector of strings derived from separating the input string into elements separated by forward slashes
 	 */
 	public static Vector<String> addressPatternStringToParts(String pstr) {
@@ -93,7 +95,7 @@ public class LXOSCMessage  {
 	
 	/**
 	 * adds a string to the address pattern
-	 * @param astr
+	 * @param astr the address pattern element to add
 	 */
 	public void addAddressPart(String astr) {
 		_address_pattern.addElement(astr);
@@ -285,7 +287,7 @@ public class LXOSCMessage  {
 	}
 	/**
 	 * compare address pattern string to message OSC address
-	 * @param testString
+	 * @param testString to match to the address pattern of this message
 	 * @return true if all address parts match
 	 */
 	public boolean matchesAddressPattern(String testString) {
@@ -307,7 +309,7 @@ public class LXOSCMessage  {
 	
 	/**
 	 * compare OSC address string to message address pattern 
-	 * @param testString
+	 * @param testString to match
 	 * @return true if all address parts match
 	 */
 	public boolean matchesOSCAddress(String testString) {
@@ -316,7 +318,7 @@ public class LXOSCMessage  {
 	
 	/**
 	 * Add a pre-made argument
-	 * @param arg
+	 * @param arg argument to add to message
 	 */
 	public void addArgument(LXOSCArgument arg) {
 		_arguments.addElement(arg);
@@ -488,6 +490,7 @@ public class LXOSCMessage  {
 	/**
 	 * Adds the complete message to a byte[] using OSC protocol
 	 * @param buffer byte array to write into.  Must be large enough to hold address pattern, type list and arguments
+	 * @param si start index in byte[]
 	 * @return length of complete OSC packet or -1 if there's an error
 	 */
 	public int addOSCMessageToBytes(byte[] buffer, int si) {
@@ -551,6 +554,7 @@ public class LXOSCMessage  {
 	/**
 	 * Adds the address pattern to byte[] beginning at index ci
 	 * @param buffer byte[] to hold address pattern
+	 * @param ci current index in byte[]
 	 * @return length of address pattern plus padding if needed
 	 */
 	public int addAddressPatternToBytes(byte[] buffer, int ci) {

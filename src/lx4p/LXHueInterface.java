@@ -45,7 +45,7 @@ public class LXHueInterface implements LXUPnPDelegate  {
 	
 	/**
 	 * initialize the hue interface with a user name to use when connecting to the Hue Bridge
-	 * @param user_name
+	 * @param user_name name of the user to use when connecting to the Hue Bridge
 	 */
 	
    public LXHueInterface(String user_name) {
@@ -106,7 +106,7 @@ public class LXHueInterface implements LXUPnPDelegate  {
    
    /**
     * queries the Hue Bridge for the current state of the lights
-    * returns a string with the status in JSON format
+    * @return a string with the status in JSON format
     */
    public String getHueLightsState() {
 	  String rstr = null;

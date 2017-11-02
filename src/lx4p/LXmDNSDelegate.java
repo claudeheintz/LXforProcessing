@@ -31,11 +31,13 @@ public interface LXmDNSDelegate {
 	
 	/**
 	 * Called when the mDNS discovery receives an mDNS reply record as part of a Standard Query Answer Packet
+	 * @param rr reply record that has been received and is being passed to delegate
 	 */
 	public void receivedMDNSQueryAnswerRecord(LXDNSReplyRecord rr);
 	
 	/**
 	 * Called when the mDNS discovery receives an mDNS reply record as part of a Standard Query Packet
+	 * * @param rr query record that has been received and is being passed to delegate
 	 */
 	public void receivedMDNSQueryRecord(LXDNSReplyRecord rr);
 	
