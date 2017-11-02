@@ -29,7 +29,7 @@ String interfaceToFind = "en0";
 
 // ***** DMX output settings
 // EDIT these settings if you don't want to search for a specific node to send DMX output
-String desiredArtNetNodeName = "HDoubler Light Booth";//"my Art-Net node";
+String desiredArtNetNodeName = "my Art-Net node";
 boolean searchForDesiredNode = true;
 boolean broadcastArtDMXEnabled = false;
 
