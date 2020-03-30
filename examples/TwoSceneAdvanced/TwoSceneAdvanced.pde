@@ -375,9 +375,18 @@ void draw() {
       
       
       barlevel = bars[i].getValue();
-      barout = mLevelx*barlevel;
+      if ( bars[i].selected ) {
+        barout = barlevel;
+      } else {
+        barout = mLevelx*barlevel;
+      }
+      
       barylevel = barsy[i].getValue();
-      baryout = barylevel*mLevely;
+      if ( bars[i].selected ) {
+        baryout = barylevel;
+      } else {
+        baryout = barylevel*mLevely;
+      }
       
       outlevel = Math.round(barout+baryout);  //dipless
       if ( outlevel > 255 ) {

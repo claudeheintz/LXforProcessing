@@ -26,13 +26,15 @@ import java.net.*;
 public class LXPVScrollbar {
   int swidth, sheight;    			// width and height of bar
   float xpos, ypos;       			// x and y position of bar
-  float spos, newspos;    			// x position of slider
+  float spos, newspos;    			// y position of slider
   float sposMin, sposMax; 			// max and min values of slider
-  float loose;              			// how loose/heavy
+  float loose;              		// how loose/heavy
   boolean over;           			// is the mouse over the slider?
   boolean locked;		  			// locked on tracking the mouse
+  boolean lockedOnBody = false;		// mouse was pressed over the body of the slider (not the knob)
   float ratio;			  			// aspect
   public String oscAddress = null;	// string to match OSC address pattern
+  public boolean selected = false;	// toggled by clicking on the body, not the knob, of the slider
   
   public static int INDICATOR_RED = 0;
   public static int INDICATOR_GREEN = 1;
@@ -68,19 +70,32 @@ public class LXPVScrollbar {
    */
   public boolean update(PApplet p) {
 	// determine if the mouse is over the control
+	over = false;
+	boolean overBody = false;
     if ( p.mouseX > xpos && p.mouseX < xpos+swidth &&
        	 p.mouseY > ypos && p.mouseY < ypos+sheight) {
-    	over = true;
-    } else {
-    	over = false;
+       	 if (  p.mouseY >= spos && p.mouseY < spos + swidth ) {
+    		over = true;
+    	 } else {
+    		 overBody = true;
+    	 }
     }
     // if the mouse is over the control and the button is pressed, lock on and track the mouse
     if ( p.mousePressed && over) {
       locked = true;
     }
+    if ( p.mousePressed && overBody) {
+        lockedOnBody = true;
+      }
     // stop tracking if the mouse is released
     if (! p.mousePressed) {
       locked = false;
+      if ( lockedOnBody ) {
+	      if ( overBody ) {
+	    	  selected = ! selected;
+	      }
+	      lockedOnBody = false;
+      }
     }
     // if tracking the mouse, compute the new position of the sliding indicator
     if ( locked ) {
@@ -101,7 +116,11 @@ public class LXPVScrollbar {
    */
   public void draw(PApplet p) {
 	    p.noStroke();
-	    p.fill(204);
+	    if ( selected ) {
+	    	p.fill(224, 204, 204);
+	    } else {
+	    	p.fill(204);
+	    }
 	    p.rect(xpos, ypos, swidth, sheight);
 	    if (over || locked) {
 	    	p.fill(0, 0, 0);
@@ -207,7 +226,7 @@ public class LXPVScrollbar {
    * @param val	the input
    * @param minv the minimum
    * @param maxv the maximum
-   * @return the constrained value where minv =< out <= maxv
+   * @return the constrained value where minv &lt;= out &lt;= maxv
    */
   public float constrain(float val, float minv, float maxv) {
     return Math.min(Math.max(val, minv), maxv);

@@ -19,7 +19,6 @@ import java.util.*;
 */
 
 public class LXOSCPacketReader  {
-	public static final int OSC_BUFFER_MAX = 400;
 	Vector<LXOSCMessage> _results;
 	
 	/**
